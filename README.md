@@ -5,8 +5,6 @@ This is a migration of the original [NewPipe Extractor](https://github.com/TeamN
 
 org.schabi.newpipe has been refactored to ac.mdiq.vista.  And of course the package renamed to VistaGuide, the group name has been refactored (from com.github.TeamNewPipe) to com.github.XilinJia, extractor.NewPipe is refactored to extractor.Vista
 
-Currently the package has not been published to jitpack yet.
-
 Up to date with version 0.24.2 of NewPipe Extractor
 
 =================================
