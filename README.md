@@ -19,7 +19,7 @@ Vista Guide is available at JitPack's Maven repo.
 If you're using Gradle, you could add Vista Guide as a dependency with the following steps:
 
 1. Add `maven { url 'https://jitpack.io' }` to the `repositories` in your `build.gradle`.
-2. Add `implementation 'com.github.XilinJia:VistaGuide:INSERT_VERSION_HERE'` to the `dependencies` in your `build.gradle`. Replace `INSERT_VERSION_HERE` with the [latest release](https://github.com/XilinJia/VistaGuide/releases/latest).
+2. Add `implementation 'com.github.XilinJia.VistaGuide:VistaGuide:INSERT_VERSION_HERE'` to the `dependencies` in your `build.gradle`. Replace `INSERT_VERSION_HERE` with the [latest release](https://github.com/XilinJia/VistaGuide/releases/latest).
 3. If you are using tools to minimize your project, make sure to keep the files below, by e.g. adding the following lines to your proguard file:
  ```
 ## Rules for VistaGuide
@@ -38,7 +38,7 @@ To test changes quickly you can build the library locally. A good approach would
 ```groovy
 includeBuild('../VistaGuide') {
     dependencySubstitution {
-        substitute module('com.github.XilinJia:VistaGuide') with project(':extractor')
+        substitute module('com.github.XilinJia.VistaGuide:VistaGuide') with project(':extractor')
     }
 }
 ```
