@@ -10,7 +10,7 @@ Up to date with version 0.24.2 of NewPipe Extractor
 =================================
 ## Vista Guide
 
-Vista Guide is a library for extracting things from streaming sites. It is a core component of [VoiVista](https://github.com/XilinJia/Vista), but could be used independently.
+Vista Guide is a library for extracting things from streaming sites. It is a core component of [VoiVista](https://github.com/XilinJia/VoiVista), but could be used independently.
 
 ## Usage
 
