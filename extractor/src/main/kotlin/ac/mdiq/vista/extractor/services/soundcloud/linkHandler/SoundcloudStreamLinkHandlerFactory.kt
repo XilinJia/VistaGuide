@@ -11,11 +11,7 @@ import java.util.*
 class SoundcloudStreamLinkHandlerFactory private constructor() : LinkHandlerFactory() {
     @Throws(ParsingException::class, UnsupportedOperationException::class)
     override fun getUrl(id: String): String {
-        try {
-            return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer("https://api.soundcloud.com/tracks/$id")
-        } catch (e: Exception) {
-            throw ParsingException(e.message, e)
-        }
+        try { return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer("https://api.soundcloud.com/tracks/$id") } catch (e: Exception) { throw ParsingException(e.message, e) }
     }
 
     @Throws(ParsingException::class, UnsupportedOperationException::class)
@@ -23,11 +19,7 @@ class SoundcloudStreamLinkHandlerFactory private constructor() : LinkHandlerFact
         if (isMatch(API_URL_PATTERN, url)) return matchGroup1(API_URL_PATTERN, url)
         checkUrl(URL_PATTERN, url)
 
-        try {
-            return SoundcloudParsingHelper.resolveIdWithWidgetApi(url)
-        } catch (e: Exception) {
-            throw ParsingException(e.message, e)
-        }
+        try { return SoundcloudParsingHelper.resolveIdWithWidgetApi(url) } catch (e: Exception) { throw ParsingException(e.message, e) }
     }
 
     @Throws(ParsingException::class)

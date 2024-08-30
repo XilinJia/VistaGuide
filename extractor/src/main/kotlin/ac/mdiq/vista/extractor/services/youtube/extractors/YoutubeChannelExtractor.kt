@@ -84,9 +84,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
             val addNonVideosTab = Consumer<String> { tabName: String ->
                 try {
                     tabs.add(YoutubeChannelTabLinkHandlerFactory.instance.fromQuery(channelId?:"", listOf(tabName), ""))
-                } catch (ignored: ParsingException) {
-                    // Do not add the tab if we couldn't create the LinkHandler
-                }
+                } catch (ignored: ParsingException) {/* Do not add the tab if we couldn't create the LinkHandler */ }
             }
 
             val name = getName()
@@ -176,11 +174,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
 
     @get:Throws(ParsingException::class)
     override val url: String
-        get() = try {
-            YoutubeChannelLinkHandlerFactory.instance.getUrl("channel/$id")
-        } catch (e: ParsingException) {
-            super.url
-        }
+        get() = try { YoutubeChannelLinkHandlerFactory.instance.getUrl("channel/$id") } catch (e: ParsingException) { super.url }
 
     @get:Throws(ParsingException::class)
     override val id: String
@@ -255,11 +249,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
     override fun getFeedUrl(): String {
         // RSS feeds are accessible for age-restricted channels, no need to check whether a channel
         // has a channelAgeGateRenderer
-        try {
-            return getFeedUrlFrom(id)
-        } catch (e: Exception) {
-            throw ParsingException("Could not get feed URL", e)
-        }
+        try { return getFeedUrlFrom(id) } catch (e: Exception) { throw ParsingException("Could not get feed URL", e) }
     }
 
     @Throws(ParsingException::class)
@@ -284,11 +274,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
             }
 
             if (textObject != null) {
-                try {
-                    return mixedNumberWordToLong(getTextFromObject(textObject))
-                } catch (e: NumberFormatException) {
-                    throw ParsingException("Could not get subscriber count", e)
-                }
+                try { return mixedNumberWordToLong(getTextFromObject(textObject)) } catch (e: NumberFormatException) { throw ParsingException("Could not get subscriber count", e) }
             }
         }
 
@@ -327,9 +313,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
                 return mixedNumberWordToLong(metadataPart.getObject(0)
                     .getObject("text")
                     .getString(CONTENT))
-            } catch (e: NumberFormatException) {
-                throw ParsingException("Could not get subscriber count", e)
-            }
+            } catch (e: NumberFormatException) { throw ParsingException("Could not get subscriber count", e) }
         }
 
         // If the channel header has no contentMetadataViewModel (which is the case for system
@@ -359,9 +343,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
             return jsonResponse!!.getObject(METADATA)
                 .getObject("channelMetadataRenderer")
                 .getString("description") ?: ""
-        } catch (e: Exception) {
-            throw ParsingException("Could not get channel description", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not get channel description", e) }
     }
 
     override fun getParentChannelName(): String {

@@ -29,11 +29,7 @@ class YoutubeCommentsInfoItemExtractor(
 
     private val authorThumbnails: List<Image>
         get() {
-            try {
-                return YoutubeParsingHelper.getImagesFromThumbnailsArray(getArray(commentRenderer, "authorThumbnail.thumbnails"))
-            } catch (e: Exception) {
-                throw ParsingException("Could not get author thumbnails", e)
-            }
+            try { return YoutubeParsingHelper.getImagesFromThumbnailsArray(getArray(commentRenderer, "authorThumbnail.thumbnails")) } catch (e: Exception) { throw ParsingException("Could not get author thumbnails", e) }
         }
 
     @get:Throws(ParsingException::class)
@@ -43,20 +39,10 @@ class YoutubeCommentsInfoItemExtractor(
 
     @get:Throws(ParsingException::class)
     override val name: String
-        get() = try {
-            YoutubeParsingHelper.getTextFromObject(getObject(commentRenderer, "authorText")) ?: ""
-        } catch (e: Exception) {
-            ""
-        }
+        get() = try { YoutubeParsingHelper.getTextFromObject(getObject(commentRenderer, "authorText")) ?: "" } catch (e: Exception) { "" }
 
     override val textualUploadDate: String
-        get() = try {
-            YoutubeParsingHelper.getTextFromObject(getObject(commentRenderer, "publishedTimeText"))!!
-        } catch (e: Exception) {
-            throw ParsingException("Could not get publishedTimeText", e)
-        }
-
-
+        get() = try { YoutubeParsingHelper.getTextFromObject(getObject(commentRenderer, "publishedTimeText"))!! } catch (e: Exception) { throw ParsingException("Could not get publishedTimeText", e) }
 
     override val uploadDate: DateWrapper?
         get() {
@@ -93,17 +79,13 @@ class YoutubeCommentsInfoItemExtractor(
                 try {
                     if (textualLikeCount.isEmpty()) return 0
                     return mixedNumberWordToLong(textualLikeCount).toInt()
-                } catch (i: Exception) {
-                    throw ParsingException("Unexpected error while converting textual like count to like count", i)
-                }
+                } catch (i: Exception) { throw ParsingException("Unexpected error while converting textual like count to like count", i) }
             }
 
             try {
                 if (likeCount.isEmpty()) return 0
                 return likeCount.toInt()
-            } catch (e: Exception) {
-                throw ParsingException("Unexpected error while parsing like count as Integer", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Unexpected error while parsing like count as Integer", e) }
         }
 
 
@@ -134,9 +116,7 @@ class YoutubeCommentsInfoItemExtractor(
                 val voteCountObj = getObject(commentRenderer, "voteCount")
                 if (voteCountObj.isEmpty()) return ""
                 return YoutubeParsingHelper.getTextFromObject(voteCountObj) ?: ""
-            } catch (e: Exception) {
-                throw ParsingException("Could not get the vote count", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get the vote count", e) }
         }
 
 
@@ -152,19 +132,13 @@ class YoutubeCommentsInfoItemExtractor(
                 // eg. https://www.youtube.com/watch?v=Nj4F63E59io<feff>
                 val commentTextBomRemoved = removeUTF8BOM(commentText!!)
                 return Description(commentTextBomRemoved, Description.HTML)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get comment text", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get comment text", e) }
         }
 
 
     override val commentId: String
         get() {
-            try {
-                return getString(commentRenderer, "commentId")
-            } catch (e: Exception) {
-                throw ParsingException("Could not get comment id", e)
-            }
+            try { return getString(commentRenderer, "commentId") } catch (e: Exception) { throw ParsingException("Could not get comment id", e) }
         }
 
 
@@ -185,20 +159,12 @@ class YoutubeCommentsInfoItemExtractor(
 
     override val uploaderName: String
         get() {
-            return try {
-                YoutubeParsingHelper.getTextFromObject(getObject(commentRenderer, "authorText"))!!
-            } catch (e: Exception) {
-                ""
-            }
+            return try { YoutubeParsingHelper.getTextFromObject(getObject(commentRenderer, "authorText"))!! } catch (e: Exception) { "" }
         }
 
     override val uploaderUrl: String
         get() {
-            return try {
-                "https://www.youtube.com/channel/" + getString(commentRenderer, "authorEndpoint.browseEndpoint.browseId")
-            } catch (e: Exception) {
-                ""
-            }
+            return try { "https://www.youtube.com/channel/" + getString(commentRenderer, "authorEndpoint.browseEndpoint.browseId") } catch (e: Exception) { "" }
         }
 
     override val replyCount: Int
@@ -214,9 +180,7 @@ class YoutubeCommentsInfoItemExtractor(
                 val id = getString(getArray(commentRepliesRenderer, "contents").getObject(0),
                     "continuationItemRenderer.continuationEndpoint.continuationCommand.token")
                 return Page(url, id)
-            } catch (e: Exception) {
-                return null
-            }
+            } catch (e: Exception) { return null }
         }
 
     override val isChannelOwner: Boolean

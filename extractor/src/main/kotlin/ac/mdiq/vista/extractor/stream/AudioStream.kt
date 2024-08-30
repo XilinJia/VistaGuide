@@ -256,7 +256,6 @@ class AudioStream private constructor(
 
         /**
          * Sets the URL of the manifest this stream comes from (if applicable, otherwise null).
-         *
          * @param manifestUrl the URL of the manifest this stream comes from or `null`
          * @return this [Builder] instance
          */

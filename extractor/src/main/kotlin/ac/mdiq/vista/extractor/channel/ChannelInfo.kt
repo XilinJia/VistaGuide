@@ -77,72 +77,17 @@ class ChannelInfo(
             val name = extractor.getName()
 
             val info = ChannelInfo(serviceId, id, url, originalUrl, name)
-
-            try {
-                info.avatars = extractor.getAvatars()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.banners = extractor.getBanners()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.feedUrl = extractor.getFeedUrl()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.subscriberCount = extractor.getSubscriberCount()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.description = extractor.getDescription()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.parentChannelName = extractor.getParentChannelName()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.parentChannelUrl = extractor.getParentChannelUrl()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.parentChannelAvatars = extractor.getParentChannelAvatars()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.isVerified = extractor.isVerified()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.tabs = extractor.getTabs()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-
-            try {
-                info.tags = extractor.getTags()
-            } catch (e: Exception) {
-                info.addError(e)
-            }
+            try { info.avatars = extractor.getAvatars() } catch (e: Exception) { info.addError(e) }
+            try { info.banners = extractor.getBanners() } catch (e: Exception) { info.addError(e) }
+            try { info.feedUrl = extractor.getFeedUrl() } catch (e: Exception) { info.addError(e) }
+            try { info.subscriberCount = extractor.getSubscriberCount() } catch (e: Exception) { info.addError(e) }
+            try { info.description = extractor.getDescription() } catch (e: Exception) { info.addError(e) }
+            try { info.parentChannelName = extractor.getParentChannelName() } catch (e: Exception) { info.addError(e) }
+            try { info.parentChannelUrl = extractor.getParentChannelUrl() } catch (e: Exception) { info.addError(e) }
+            try { info.parentChannelAvatars = extractor.getParentChannelAvatars() } catch (e: Exception) { info.addError(e) }
+            try { info.isVerified = extractor.isVerified() } catch (e: Exception) { info.addError(e) }
+            try { info.tabs = extractor.getTabs() } catch (e: Exception) { info.addError(e) }
+            try { info.tags = extractor.getTags() } catch (e: Exception) { info.addError(e) }
 
             return info
         }

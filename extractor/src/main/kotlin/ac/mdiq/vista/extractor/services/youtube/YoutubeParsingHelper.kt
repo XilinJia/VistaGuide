@@ -348,9 +348,7 @@ object YoutubeParsingHelper {
         try {
             val u = URL(cachedUrl)
             return GOOGLE_URLS.stream().anyMatch { item: String? -> u.host.startsWith(item!!) }
-        } catch (e: MalformedURLException) {
-            return false
-        }
+        } catch (e: MalformedURLException) { return false }
     }
 
     fun isYoutubeURL(url: URL): Boolean {
@@ -411,13 +409,8 @@ object YoutubeParsingHelper {
      */
     private fun convertDurationToInt(input: String?): Int {
         if (input.isNullOrEmpty()) return 0
-
         val clearedInput = removeNonDigitCharacters(input)
-        return try {
-            clearedInput.toInt()
-        } catch (ex: NumberFormatException) {
-            0
-        }
+        return try { clearedInput.toInt() } catch (ex: NumberFormatException) { 0 }
     }
 
     fun getFeedUrlFrom(channelIdOrUser: String): String {
@@ -433,11 +426,8 @@ object YoutubeParsingHelper {
         return try {
             OffsetDateTime.parse(textualUploadDate)
         } catch (e: DateTimeParseException) {
-            try {
-                LocalDate.parse(textualUploadDate).atStartOfDay().atOffset(ZoneOffset.UTC)
-            } catch (e1: DateTimeParseException) {
-                throw ParsingException("Could not parse date: \"$textualUploadDate\"", e1)
-            }
+            try { LocalDate.parse(textualUploadDate).atStartOfDay().atOffset(ZoneOffset.UTC)
+            } catch (e1: DateTimeParseException) { throw ParsingException("Could not parse date: \"$textualUploadDate\"", e1) }
         }
     }
 
@@ -558,20 +548,15 @@ object YoutubeParsingHelper {
     fun extractPlaylistTypeFromPlaylistUrl(playlistUrl: String?): PlaylistType {
         try {
             return extractPlaylistTypeFromPlaylistId(getQueryValue(stringToURL(playlistUrl!!), "list"))
-        } catch (e: MalformedURLException) {
-            throw ParsingException("Could not extract playlist type from malformed url", e)
-        }
+        } catch (e: MalformedURLException) { throw ParsingException("Could not extract playlist type from malformed url", e) }
     }
 
     @Throws(ParsingException::class)
     private fun getInitialData(html: String): JsonObject {
         try {
             return JsonParser.`object`().from(getStringResultFromRegexArray(html, INITIAL_DATA_REGEXES, 1))
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not get ytInitialData", e)
-        } catch (e: RegexException) {
-            throw ParsingException("Could not get ytInitialData", e)
-        }
+        } catch (e: JsonParserException) { throw ParsingException("Could not get ytInitialData", e)
+        } catch (e: RegexException) { throw ParsingException("Could not get ytInitialData", e) }
     }
 
     @Throws(IOException::class, ExtractionException::class)
@@ -900,11 +885,7 @@ object YoutubeParsingHelper {
      */
     @Throws(ParsingException::class)
     fun getThumbnailsFromInfoItem(infoItem: JsonObject): List<Image> {
-        try {
-            return getImagesFromThumbnailsArray(infoItem.getObject("thumbnail").getArray("thumbnails"))
-        } catch (e: Exception) {
-            throw ParsingException("Could not get thumbnails from InfoItem", e)
-        }
+        try { return getImagesFromThumbnailsArray(infoItem.getObject("thumbnail").getArray("thumbnails")) } catch (e: Exception) { throw ParsingException("Could not get thumbnails from InfoItem", e) }
     }
 
     /**
@@ -1367,11 +1348,7 @@ object YoutubeParsingHelper {
      */
     fun extractAudioTrackType(streamUrl: String?): AudioTrackType? {
         val xtags: String?
-        try {
-            xtags = getQueryValue(URL(streamUrl), "xtags")
-        } catch (e: MalformedURLException) {
-            return null
-        }
+        try { xtags = getQueryValue(URL(streamUrl), "xtags") } catch (e: MalformedURLException) { return null }
         if (xtags == null) return null
 
         var atype: String? = null

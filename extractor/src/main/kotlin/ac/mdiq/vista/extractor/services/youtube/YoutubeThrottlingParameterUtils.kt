@@ -111,11 +111,7 @@ internal object YoutubeThrottlingParameterUtils {
 
     @Throws(ParsingException::class)
     fun getDeobfuscationFunction(javaScriptPlayerCode: String, functionName: String): String {
-        return try {
-            parseFunctionWithLexer(javaScriptPlayerCode, functionName)
-        } catch (e: Exception) {
-            parseFunctionWithRegex(javaScriptPlayerCode, functionName)
-        }
+        return try { parseFunctionWithLexer(javaScriptPlayerCode, functionName) } catch (e: Exception) { parseFunctionWithRegex(javaScriptPlayerCode, functionName) }
     }
 
     /**
@@ -125,14 +121,10 @@ internal object YoutubeThrottlingParameterUtils {
      * been found
      */
     fun getThrottlingParameterFromStreamingUrl(streamingUrl: String): String? {
-        return try {
-            matchGroup1(THROTTLING_PARAM_PATTERN, streamingUrl)
-        } catch (e: RegexException) {
-            // If the throttling parameter could not be parsed from the URL, it means that there is
-            // no throttling parameter
-            // Return null in this case
-            null
-        }
+        // If the throttling parameter could not be parsed from the URL, it means that there is
+        // no throttling parameter
+        // Return null in this case
+        return try { matchGroup1(THROTTLING_PARAM_PATTERN, streamingUrl) } catch (e: RegexException) { null }
     }
 
 

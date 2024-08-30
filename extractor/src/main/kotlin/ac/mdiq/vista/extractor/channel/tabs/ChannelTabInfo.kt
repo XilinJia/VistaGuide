@@ -37,11 +37,7 @@ class ChannelTabInfo(serviceId: Int, linkHandler: ListLinkHandler) : ListInfo<In
         fun getInfo(extractor: ChannelTabExtractor): ChannelTabInfo {
             val info = ChannelTabInfo(extractor.serviceId, extractor.getLinkHandler())
 
-            try {
-                info.originalUrl = extractor.originalUrl
-            } catch (e: Exception) {
-                info.addError(e)
-            }
+            try { info.originalUrl = extractor.originalUrl } catch (e: Exception) { info.addError(e) }
 
             val page = ExtractorHelper.getItemsPageOrLogError(info, extractor)
             info.relatedItems = (page.items)

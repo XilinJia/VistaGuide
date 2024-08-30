@@ -63,16 +63,12 @@ internal object YoutubeJavaScriptExtractor {
         try {
             iframeUrl = "https://www.youtube.com/iframe_api"
             iframeContent = downloader.get(iframeUrl, Localization.DEFAULT).responseBody()
-        } catch (e: Exception) {
-            throw ParsingException("Could not fetch IFrame resource", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not fetch IFrame resource", e) }
 
         try {
             val hash = matchGroup1(IFRAME_RES_JS_BASE_PLAYER_HASH_PATTERN, iframeContent)
             return String.format(BASE_JS_PLAYER_URL_FORMAT, hash)
-        } catch (e: RegexException) {
-            throw ParsingException("IFrame resource didn't provide JavaScript base player's hash", e)
-        }
+        } catch (e: RegexException) { throw ParsingException("IFrame resource didn't provide JavaScript base player's hash", e) }
     }
 
     @Throws(ParsingException::class)
@@ -82,9 +78,7 @@ internal object YoutubeJavaScriptExtractor {
         try {
             embedUrl = "https://www.youtube.com/embed/$videoId"
             embedPageContent = downloader.get(embedUrl, Localization.DEFAULT).responseBody()
-        } catch (e: Exception) {
-            throw ParsingException("Could not fetch embedded watch page", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not fetch embedded watch page", e) }
 
         // Parse HTML response with jsoup and look at script elements first
         val doc = Jsoup.parse(embedPageContent)
@@ -96,11 +90,7 @@ internal object YoutubeJavaScriptExtractor {
         }
 
         // Use regexes to match the URL in an embedded script of the HTML page
-        try {
-            return matchGroup1(EMBEDDED_WATCH_PAGE_JS_BASE_PLAYER_URL_PATTERN, embedPageContent)
-        } catch (e: RegexException) {
-            throw ParsingException("Embedded watch page didn't provide JavaScript base player's URL", e)
-        }
+        try { return matchGroup1(EMBEDDED_WATCH_PAGE_JS_BASE_PLAYER_URL_PATTERN, embedPageContent) } catch (e: RegexException) { throw ParsingException("Embedded watch page didn't provide JavaScript base player's URL", e) }
     }
 
     private fun cleanJavaScriptUrl(javaScriptPlayerUrl: String): String {
@@ -116,10 +106,6 @@ internal object YoutubeJavaScriptExtractor {
 
     @Throws(ParsingException::class)
     private fun downloadJavaScriptCode(javaScriptPlayerUrl: String): String {
-        try {
-            return downloader.get(javaScriptPlayerUrl, Localization.DEFAULT).responseBody()
-        } catch (e: Exception) {
-            throw ParsingException("Could not get JavaScript base player's code", e)
-        }
+        try { return downloader.get(javaScriptPlayerUrl, Localization.DEFAULT).responseBody() } catch (e: Exception) { throw ParsingException("Could not get JavaScript base player's code", e) }
     }
 }

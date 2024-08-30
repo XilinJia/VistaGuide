@@ -52,21 +52,13 @@ class YoutubeChannelInfoItemExtractor(private val channelInfoItem: JsonObject) :
 
     override val thumbnails: List<Image>
         get() {
-            try {
-                return getThumbnailsFromInfoItem(channelInfoItem)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get thumbnails", e)
-            }
+            try { return getThumbnailsFromInfoItem(channelInfoItem) } catch (e: Exception) { throw ParsingException("Could not get thumbnails", e) }
         }
 
     @get:Throws(ParsingException::class)
     override val name: String
         get() {
-            try {
-                return getTextFromObject(channelInfoItem.getObject("title")) ?: ""
-            } catch (e: Exception) {
-                throw ParsingException("Could not get name", e)
-            }
+            try { return getTextFromObject(channelInfoItem.getObject("title")) ?: "" } catch (e: Exception) { throw ParsingException("Could not get name", e) }
         }
 
     @get:Throws(ParsingException::class)
@@ -75,9 +67,7 @@ class YoutubeChannelInfoItemExtractor(private val channelInfoItem: JsonObject) :
             try {
                 val id = "channel/" + channelInfoItem.getString("channelId")
                 return YoutubeChannelLinkHandlerFactory.instance.getUrl(id)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get url", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get url", e) }
         }
 
     @Throws(ParsingException::class)
@@ -90,9 +80,7 @@ class YoutubeChannelInfoItemExtractor(private val channelInfoItem: JsonObject) :
                 return if (channelInfoItem.has("videoCountText")) mixedNumberWordToLong(getTextFromObject(channelInfoItem.getObject("videoCountText"))) else -1
 
             return mixedNumberWordToLong(getTextFromObject(channelInfoItem.getObject("subscriberCountText")))
-        } catch (e: Exception) {
-            throw ParsingException("Could not get subscriber count", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not get subscriber count", e) }
     }
 
     @Throws(ParsingException::class)
@@ -103,9 +91,7 @@ class YoutubeChannelInfoItemExtractor(private val channelInfoItem: JsonObject) :
             if (withHandle || !channelInfoItem.has("videoCountText")) return ListExtractor.ITEM_COUNT_UNKNOWN
 
             return removeNonDigitCharacters(getTextFromObject(channelInfoItem.getObject("videoCountText"))!!).toLong()
-        } catch (e: Exception) {
-            throw ParsingException("Could not get stream count", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not get stream count", e) }
     }
 
     @Throws(ParsingException::class)
@@ -119,8 +105,6 @@ class YoutubeChannelInfoItemExtractor(private val channelInfoItem: JsonObject) :
             // Channel have no description.
             if (!channelInfoItem.has("descriptionSnippet")) return ""
             return getTextFromObject(channelInfoItem.getObject("descriptionSnippet")) ?: ""
-        } catch (e: Exception) {
-            throw ParsingException("Could not get description", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not get description", e) }
     }
 }

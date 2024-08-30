@@ -94,66 +94,18 @@ class PlaylistInfo private constructor(serviceId: Int, linkHandler: ListLinkHand
             // just a playlist without an uploader
             val uploaderParsingErrors: MutableList<Throwable> = ArrayList()
 
-            try {
-                info.originalUrl = extractor.originalUrl
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.streamCount = extractor.streamCount
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.description = extractor.description
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.thumbnails = extractor.thumbnails
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.uploaderUrl = extractor.uploaderUrl ?: ""
-            } catch (e: Exception) {
-                uploaderParsingErrors.add(e)
-            }
-            try {
-                info.uploaderName = extractor.uploaderName ?: "No name"
-            } catch (e: Exception) {
-                uploaderParsingErrors.add(e)
-            }
-            try {
-                info.uploaderAvatars = extractor.uploaderAvatars
-            } catch (e: Exception) {
-                uploaderParsingErrors.add(e)
-            }
-            try {
-                info.subChannelUrl = extractor.subChannelUrl
-            } catch (e: Exception) {
-                uploaderParsingErrors.add(e)
-            }
-            try {
-                info.subChannelName = extractor.subChannelName
-            } catch (e: Exception) {
-                uploaderParsingErrors.add(e)
-            }
-            try {
-                info.subChannelAvatars = extractor.subChannelAvatars
-            } catch (e: Exception) {
-                uploaderParsingErrors.add(e)
-            }
-            try {
-                info.banners = extractor.banners
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.playlistType = extractor.playlistType
-            } catch (e: Exception) {
-                info.addError(e)
-            }
+            try { info.originalUrl = extractor.originalUrl } catch (e: Exception) { info.addError(e) }
+            try { info.streamCount = extractor.streamCount } catch (e: Exception) { info.addError(e) }
+            try { info.description = extractor.description } catch (e: Exception) { info.addError(e) }
+            try { info.thumbnails = extractor.thumbnails } catch (e: Exception) { info.addError(e) }
+            try { info.uploaderUrl = extractor.uploaderUrl ?: "" } catch (e: Exception) { uploaderParsingErrors.add(e) }
+            try { info.uploaderName = extractor.uploaderName ?: "No name" } catch (e: Exception) { uploaderParsingErrors.add(e) }
+            try { info.uploaderAvatars = extractor.uploaderAvatars } catch (e: Exception) { uploaderParsingErrors.add(e) }
+            try { info.subChannelUrl = extractor.subChannelUrl } catch (e: Exception) { uploaderParsingErrors.add(e) }
+            try { info.subChannelName = extractor.subChannelName } catch (e: Exception) { uploaderParsingErrors.add(e) }
+            try { info.subChannelAvatars = extractor.subChannelAvatars } catch (e: Exception) { uploaderParsingErrors.add(e) }
+            try { info.banners = extractor.banners } catch (e: Exception) { info.addError(e) }
+            try { info.playlistType = extractor.playlistType } catch (e: Exception) { info.addError(e) }
 
             // do not fail if everything but the uploader infos could be collected (TODO better comment)
             if (uploaderParsingErrors.isNotEmpty() && (info.errors.isNotEmpty() || uploaderParsingErrors.size < 3)) info.addAllErrors(uploaderParsingErrors)

@@ -31,12 +31,8 @@ abstract class Info(
 
     val service: StreamingService
         get() {
-            try {
-                return Vista.getService(serviceId)
-            } catch (e: ExtractionException) {
-                // this should be unreachable, as serviceId certainly refers to a valid service
-                throw RuntimeException("Info object has invalid service id", e)
-            }
+            // the exception should be unreachable, as serviceId certainly refers to a valid service
+            try { return Vista.getService(serviceId) } catch (e: ExtractionException) { throw RuntimeException("Info object has invalid service id", e) }
         }
 
     fun addError(throwable: Throwable) {
@@ -47,15 +43,11 @@ abstract class Info(
         errors.addAll(throwables!!)
     }
 
-    constructor(serviceId: Int, linkHandler: LinkHandler, name: String) : this(serviceId,
-        linkHandler.id,
-        linkHandler.url,
-        linkHandler.originalUrl,
-        name)
+    constructor(serviceId: Int, linkHandler: LinkHandler, name: String)
+            : this(serviceId, linkHandler.id, linkHandler.url, linkHandler.originalUrl, name)
 
     override fun toString(): String {
         val ifDifferentString = if (url == originalUrl) "" else " (originalUrl=\"$originalUrl\")"
         return ("${javaClass.simpleName}[url=\"$url\"$ifDifferentString, name=\"$name\"]")
     }
-
 }

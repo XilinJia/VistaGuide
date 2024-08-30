@@ -56,13 +56,9 @@ class YoutubeMixOrPlaylistInfoItemExtractor(private val mixInfoItem: JsonObject)
         val countString = getTextFromObject(mixInfoItem.getObject("videoCountShortText"))
             ?: throw ParsingException("Could not extract item count for playlist/mix info item")
 
-        return try {
-            countString.toInt().toLong()
-        } catch (ignored: NumberFormatException) {
-            // un-parsable integer: this is a mix with infinite items and "50+" as count string
-            // (though YouTube Music mixes do not necessarily have an infinite count of songs)
-            ListExtractor.ITEM_COUNT_INFINITE
-        }
+        // un-parsable integer: this is a mix with infinite items and "50+" as count string
+        // (though YouTube Music mixes do not necessarily have an infinite count of songs)
+        return try { countString.toInt().toLong() } catch (ignored: NumberFormatException) { ListExtractor.ITEM_COUNT_INFINITE }
     }
 
 

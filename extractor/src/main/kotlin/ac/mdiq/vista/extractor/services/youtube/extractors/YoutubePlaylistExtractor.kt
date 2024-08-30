@@ -167,9 +167,7 @@ class YoutubePlaylistExtractor(service: StreamingService, linkHandler: ListLinkH
                     .getObject(0)
                     .getObject("navigationEndpoint")
                 else uploaderInfo!!.getObject("navigationEndpoint"))
-            } catch (e: Exception) {
-                throw ParsingException("Could not get playlist uploader url", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get playlist uploader url", e) }
         }
 
     @get:Throws(ParsingException::class)
@@ -190,11 +188,7 @@ class YoutubePlaylistExtractor(service: StreamingService, linkHandler: ListLinkH
             // The new playlist interface doesn't provide an uploader avatar
             if (isNewPlaylistInterface) return listOf()
 
-            try {
-                return getImagesFromThumbnailsArray(uploaderInfo!!.getObject("thumbnail").getArray("thumbnails"))
-            } catch (e: Exception) {
-                throw ParsingException("Could not get playlist uploader avatars", e)
-            }
+            try { return getImagesFromThumbnailsArray(uploaderInfo!!.getObject("thumbnail").getArray("thumbnails")) } catch (e: Exception) { throw ParsingException("Could not get playlist uploader avatars", e) }
         }
 
     // YouTube doesn't provide this information

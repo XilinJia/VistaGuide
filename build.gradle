@@ -5,7 +5,7 @@ allprojects {
     compileJava.options.encoding = 'UTF-8'
     compileTestJava.options.encoding = 'UTF-8'
 
-    version 'lv0.24.2.5'
+    version 'lv0.24.2.6'
     group 'com.github.XilinJia'
 
     repositories {
@@ -19,9 +19,6 @@ allprojects {
                 mavenJava(MavenPublication) {
                     from components.java
                 }
-//                 groupId='com.github.XilinJia'
-//                 artifactId = 'vistaguide'
-//                 version = '1.0'
             }
         }
     }

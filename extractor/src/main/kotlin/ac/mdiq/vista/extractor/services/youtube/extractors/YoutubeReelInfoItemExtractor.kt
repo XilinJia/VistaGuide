@@ -34,9 +34,7 @@ open class YoutubeReelInfoItemExtractor(private val reelInfo: JsonObject) : Stre
             try {
                 val videoId = reelInfo.getString("videoId")
                 return YoutubeStreamLinkHandlerFactory.instance.getUrl(videoId)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get URL", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get URL", e) }
         }
 
     @get:Throws(ParsingException::class)

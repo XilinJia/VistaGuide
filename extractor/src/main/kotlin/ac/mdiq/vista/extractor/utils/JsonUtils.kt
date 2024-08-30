@@ -87,21 +87,13 @@ object JsonUtils {
 
     @Throws(ParsingException::class)
     fun toJsonArray(responseBody: String?): JsonArray {
-        try {
-            return JsonParser.array().from(responseBody)
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse JSON", e)
-        }
+        try { return JsonParser.array().from(responseBody) } catch (e: JsonParserException) { throw ParsingException("Could not parse JSON", e) }
     }
 
 
     @Throws(ParsingException::class)
     fun toJsonObject(responseBody: String?): JsonObject {
-        try {
-            return JsonParser.`object`().from(responseBody)
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse JSON", e)
-        }
+        try { return JsonParser.`object`().from(responseBody) } catch (e: JsonParserException) { throw ParsingException("Could not parse JSON", e) }
     }
 
     /**

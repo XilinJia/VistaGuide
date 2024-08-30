@@ -206,12 +206,9 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                         try {
                             // TODO: this parses English formatted dates only, we need a better approach to
                             //  parse the textual date
-                            val localDate: LocalDate = LocalDate.parse(videoPrimaryInfoRendererDateText,
-                                DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH))
+                            val localDate: LocalDate = LocalDate.parse(videoPrimaryInfoRendererDateText, DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH))
                             return DateTimeFormatter.ISO_LOCAL_DATE.format(localDate)
-                        } catch (e: Exception) {
-                            throw ParsingException("Could not get upload date", e)
-                        }
+                        } catch (e: Exception) { throw ParsingException("Could not get upload date", e) }
                     }
                     throw ParsingException("Could not get upload date")
                 }
@@ -235,9 +232,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                 return getImagesFromThumbnailsArray(playerResponse!!.getObject("videoDetails")
                     .getObject("thumbnail")
                     .getArray("thumbnails"))
-            } catch (e: Exception) {
-                throw ParsingException("Could not get thumbnails")
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get thumbnails") }
         }
 
     @get:Throws(ParsingException::class)
@@ -282,10 +277,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             if (adaptiveFormats.isEmpty()) continue
 
             val durationMs: String = adaptiveFormats.getObject(0).getString("approxDurationMs")
-            try {
-                return Math.round(durationMs.toLong() / 1000f)
-            } catch (ignored: NumberFormatException) {
-            }
+            try { return Math.round(durationMs.toLong() / 1000f) } catch (ignored: NumberFormatException) { }
         }
 
         throw ParsingException("Could not get duration")
@@ -330,19 +322,12 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                 .getObject("menuRenderer")
                 .getArray("topLevelButtons")
 
-            try {
-                return parseLikeCountFromLikeButtonViewModel(topLevelButtons)
-            } catch (ignored: ParsingException) {
-                // A segmentedLikeDislikeButtonRenderer could be returned instead of a
-                // segmentedLikeDislikeButtonViewModel, so ignore extraction errors relative to
-                // segmentedLikeDislikeButtonViewModel object
-            }
+            // A segmentedLikeDislikeButtonRenderer could be returned instead of a
+            // segmentedLikeDislikeButtonViewModel, so ignore extraction errors relative to
+            // segmentedLikeDislikeButtonViewModel object
+            try { return parseLikeCountFromLikeButtonViewModel(topLevelButtons) } catch (ignored: ParsingException) { }
 
-            try {
-                return parseLikeCountFromLikeButtonRenderer(topLevelButtons)
-            } catch (e: ParsingException) {
-                throw ParsingException("Could not get like count", e)
-            }
+            try { return parseLikeCountFromLikeButtonRenderer(topLevelButtons) } catch (e: ParsingException) { throw ParsingException("Could not get like count", e) }
         }
 
     @get:Throws(ParsingException::class)
@@ -377,7 +362,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         get() = isVerified(getVideoSecondaryInfoRenderer().getObject("owner").getObject("videoOwnerRenderer").getArray("badges"))
 
     @get:Throws(ParsingException::class)
-
     override val uploaderAvatars: List<Image>
         get() {
             assertPageFetched()
@@ -396,11 +380,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         get() {
             val videoOwnerRenderer: JsonObject = getObject(videoSecondaryInfoRenderer!!, "owner.videoOwnerRenderer")
             if (!videoOwnerRenderer.has("subscriberCountText")) return UNKNOWN_SUBSCRIBER_COUNT
-            try {
-                return mixedNumberWordToLong(getTextFromObject(videoOwnerRenderer.getObject("subscriberCountText")))
-            } catch (e: NumberFormatException) {
-                throw ParsingException("Could not get uploader subscriber count", e)
-            }
+            try { return mixedNumberWordToLong(getTextFromObject(videoOwnerRenderer.getObject("subscriberCountText"))) } catch (e: NumberFormatException) { throw ParsingException("Could not get uploader subscriber count", e) }
         }
 
     @get:Throws(ParsingException::class)
@@ -414,7 +394,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         }
 
     @get:Throws(ParsingException::class)
-
     override val hlsUrl: String
         get() {
             assertPageFetched()
@@ -447,10 +426,8 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         }
 
     @get:Throws(ParsingException::class)
-
     override val subtitlesDefault: List<SubtitlesStream>
         get() = getSubtitles(MediaFormat.TTML)
-
 
     @Throws(ParsingException::class)
     override fun getSubtitles(format: MediaFormat): List<SubtitlesStream> {
@@ -516,8 +493,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                         .map { result: JsonObject ->
                             when {
                                 result.has("compactVideoRenderer") ->
-                                    return@map YoutubeStreamInfoItemExtractor(result.getObject("compactVideoRenderer"),
-                                        timeAgoParser)
+                                    return@map YoutubeStreamInfoItemExtractor(result.getObject("compactVideoRenderer"), timeAgoParser)
                                 result.has("compactRadioRenderer") ->
                                     return@map YoutubeMixOrPlaylistInfoItemExtractor(result.getObject("compactRadioRenderer"))
                                 result.has("compactPlaylistRenderer") ->
@@ -529,9 +505,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                         .forEach { extractor: InfoItemExtractor? -> if (extractor != null) collector.commit(extractor) }
                 }
                 return collector
-            } catch (e: Exception) {
-                throw ParsingException("Could not get related videos", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get related videos", e) }
         }
 
     /**
@@ -543,9 +517,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                 getTextFromObject(playerResponse!!.getObject("playabilityStatus")
                     .getObject("errorScreen").getObject("playerErrorMessageRenderer")
                     .getObject("reason"))
-            } catch (e: NullPointerException) {
-                null // No error message
-            }
+            } catch (e: NullPointerException) { null /* No error message */ }
         }
 
     @Throws(IOException::class, ExtractionException::class)
@@ -598,12 +570,9 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             // Fetching successfully the iOS player is mandatory to get streams
             fetchIosMobileJsonPlayer(contentCountry, localization, videoId)
 
-            try {
-                fetchAndroidMobileJsonPlayer(contentCountry, localization, videoId)
-            } catch (ignored: Exception) {
-                // Ignore exceptions related to ANDROID client fetch or parsing, as it is not
-                // compulsory to play contents
-            }
+            // Ignore exceptions related to ANDROID client fetch or parsing, as it is not
+            // compulsory to play contents
+            try { fetchAndroidMobileJsonPlayer(contentCountry, localization, videoId) } catch (ignored: Exception) { }
         }
 
         // The microformat JSON object of the content is only returned on the WEB client,
@@ -680,6 +649,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         val playerResponseObject: JsonObject = androidPlayerResponse.getObject("playerResponse")
         if (isPlayerResponseNotValid(playerResponseObject, videoId)) return
 
+//        println("fetchAndroidMobileJsonPlayer playerResponseObject: $playerResponseObject")
         val streamingData: JsonObject = playerResponseObject.getObject(STREAMING_DATA)
         if (!streamingData.isEmpty()) {
             androidStreamingData = streamingData
@@ -775,11 +745,9 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             /*
                 Use the iosStreamingData object first because there is no n param and no
                 signatureCiphers in streaming URLs of the iOS client
-
                 The androidStreamingData is used as second way as it isn't used on livestreams,
                 it doesn't return all available streams, and the Android client extraction is
                 more likely to break
-
                 As age-restricted videos are not common, use tvHtml5SimplyEmbedStreamingData
                 last, which will be the only one not empty for age-restricted content
                  */
@@ -789,9 +757,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                 .map(streamBuilderHelper)
                 .forEachOrdered { stream: T -> if (!Stream.containSimilarStream(stream, streamList)) streamList.add(stream) }
             return streamList
-        } catch (e: Exception) {
-            throw ParsingException("Could not get $streamTypeExceptionMessage streams", e)
-        }
+        } catch (e: Exception) { throw ParsingException("Could not get $streamTypeExceptionMessage streams", e) }
     }
 
     /**
@@ -814,7 +780,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
      *
      * @return a stream builder helper to build [AudioStream]s
      */
-
     private val audioStreamBuilderHelper: Function<ItagInfo, AudioStream>
         get() {
             return Function<ItagInfo, AudioStream> { itagInfo: ItagInfo ->
@@ -867,7 +832,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
      * streams as video-only streams
      * @return a stream builder helper to build [VideoStream]s
      */
-
     private fun getVideoStreamBuilderHelper(areStreamsVideoOnly: Boolean): Function<ItagInfo, VideoStream> {
         return Function<ItagInfo, VideoStream> { itagInfo: ItagInfo ->
             val itagItem: ItagItem = itagInfo.itagItem
@@ -914,13 +878,14 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             .map { it as JsonObject }      // Cast elements to JsonObject
             .map { formatData: JsonObject ->
                 try {
+//                    println("getStreamsFromStreamingDataKey formatData: $formatData")
                     val itagItem: ItagItem = getItag(formatData.getInt("itag"))
                     if (itagItem.itagType == itagTypeWanted)
                         return@map buildAndAddItagInfoToList(videoId, formatData, itagItem, itagItem.itagType, contentPlaybackNonce)
                 } catch (ignored: ExtractionException) { }
                 null
             }
-            .filter { Objects.nonNull(it) }  // Filter out null values
+            .filter { it != null }  // Filter out null values
             .map { it!! }
     }
 
@@ -978,9 +943,10 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             itagItem.setAudioChannels(formatData.getInt("audioChannels", 2))
 
             val aObj = formatData.getObject("audioTrack")
+//            println("buildAndAddItagInfoToList aObj: $aObj")
             val audioTrackId: String? = aObj?.getString("id")
             if (!audioTrackId.isNullOrEmpty()) {
-                itagItem.audioTrackId = (audioTrackId)
+                itagItem.audioTrackId = audioTrackId
                 val audioTrackIdLastLocaleCharacter: Int = audioTrackId.indexOf(".")
                 // Audio tracks IDs are in the form LANGUAGE_CODE.TRACK_NUMBER
                 if (audioTrackIdLastLocaleCharacter != -1)
@@ -1005,12 +971,10 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         // are not playable).
         // Ended livestreams are returned as non URL streams
         else itagInfo.isUrl = (streamType != StreamType.POST_LIVE_STREAM)
-
         return itagInfo
     }
 
     @get:Throws(ExtractionException::class)
-
     override val frames: List<Frameset>
         get() {
             try {
@@ -1051,16 +1015,13 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             }
         }
 
-
     override val privacy: Privacy
         get() = if (playerMicroFormatRenderer!!.getBoolean("isUnlisted")) Privacy.UNLISTED else Privacy.PUBLIC
-
 
     override val category: String
         get() = playerMicroFormatRenderer!!.getString("category", "")
 
     @get:Throws(ParsingException::class)
-
     override val licence: String
         get() {
             val metadataRowRenderer: JsonObject = getVideoSecondaryInfoRenderer()
@@ -1078,12 +1039,10 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
     override val languageInfo: Locale?
         get() =  null
 
-
     override val tags: List<String>
         get() = getStringListFromJsonArray(playerResponse!!.getObject("videoDetails").getArray("keywords"))
 
     @get:Throws(ParsingException::class)
-
     override val streamSegments: List<StreamSegment>
         get() {
             if (!nextResponse!!.has("engagementPanels")) return emptyList()
@@ -1140,7 +1099,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         }
 
     @get:Throws(ParsingException::class)
-
     override val metaInfo: List<MetaInfo>
         get() {
             if(nextResponse == null) return listOf()
@@ -1195,11 +1153,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             // the full like count from accessibility data
             if (likesString == null) throw ParsingException("Could not get like count from accessibility data")
 
-            try {
-                return removeNonDigitCharacters(likesString).toLong()
-            } catch (e: NumberFormatException) {
-                throw ParsingException("Could not parse \"$likesString\" as a long", e)
-            }
+            try { return removeNonDigitCharacters(likesString).toLong() } catch (e: NumberFormatException) { throw ParsingException("Could not parse \"$likesString\" as a long", e) }
         }
 
         @Throws(ParsingException::class)
@@ -1228,13 +1182,8 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 
             // The like count is always returned as a number in this element, even for videos with no
             // likes
-            try {
-                return removeNonDigitCharacters(accessibilityText).toLong()
-            } catch (e: NumberFormatException) {
-                throw ParsingException("Could not parse \"$accessibilityText\" as a long", e)
-            }
+            try { return removeNonDigitCharacters(accessibilityText).toLong() } catch (e: NumberFormatException) { throw ParsingException("Could not parse \"$accessibilityText\" as a long", e) }
         }
-
 
         private fun getManifestUrl(manifestType: String, streamingDataObjects: List<JsonObject?>): String {
             val manifestKey: String = manifestType + "ManifestUrl"

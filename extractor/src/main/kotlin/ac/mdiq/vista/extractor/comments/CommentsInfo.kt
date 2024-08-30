@@ -71,11 +71,7 @@ class CommentsInfo private constructor(
             val initialCommentsPage = ExtractorHelper.getItemsPageOrLogError(commentsInfo, commentsExtractor)
             commentsInfo.isCommentsDisabled = commentsExtractor.isCommentsDisabled
             commentsInfo.relatedItems = initialCommentsPage.items
-            try {
-                commentsInfo.commentsCount = commentsExtractor.commentsCount
-            } catch (e: Exception) {
-                commentsInfo.addError(e)
-            }
+            try { commentsInfo.commentsCount = commentsExtractor.commentsCount } catch (e: Exception) { commentsInfo.addError(e) }
             commentsInfo.nextPage = initialCommentsPage.nextPage
 
             return commentsInfo

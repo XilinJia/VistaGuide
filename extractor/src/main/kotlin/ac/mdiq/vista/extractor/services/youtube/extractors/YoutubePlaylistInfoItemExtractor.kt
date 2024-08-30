@@ -21,19 +21,13 @@ open class YoutubePlaylistInfoItemExtractor(private val playlistInfoItem: JsonOb
                 var thumbnails = playlistInfoItem.getArray("thumbnails").getObject(0).getArray("thumbnails")
                 if (thumbnails.isEmpty()) thumbnails = playlistInfoItem.getObject("thumbnail").getArray("thumbnails")
                 return getImagesFromThumbnailsArray(thumbnails)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get thumbnails", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get thumbnails", e) }
         }
 
     @get:Throws(ParsingException::class)
     override val name: String
         get() {
-            try {
-                return getTextFromObject(playlistInfoItem.getObject("title")) ?: ""
-            } catch (e: Exception) {
-                throw ParsingException("Could not get name", e)
-            }
+            try { return getTextFromObject(playlistInfoItem.getObject("title")) ?: "" } catch (e: Exception) { throw ParsingException("Could not get name", e) }
         }
 
     @get:Throws(ParsingException::class)
@@ -42,36 +36,22 @@ open class YoutubePlaylistInfoItemExtractor(private val playlistInfoItem: JsonOb
             try {
                 val id = playlistInfoItem.getString("playlistId")
                 return YoutubePlaylistLinkHandlerFactory.instance.getUrl(id)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get url", e)
-            }
+            } catch (e: Exception) { throw ParsingException("Could not get url", e) }
         }
 
     @Throws(ParsingException::class)
     override fun getUploaderName(): String? {
-        try {
-            return getTextFromObject(playlistInfoItem.getObject("longBylineText"))
-        } catch (e: Exception) {
-            throw ParsingException("Could not get uploader name", e)
-        }
+        try { return getTextFromObject(playlistInfoItem.getObject("longBylineText")) } catch (e: Exception) { throw ParsingException("Could not get uploader name", e) }
     }
 
     @Throws(ParsingException::class)
     override fun getUploaderUrl(): String? {
-        try {
-            return getUrlFromObject(playlistInfoItem.getObject("longBylineText"))
-        } catch (e: Exception) {
-            throw ParsingException("Could not get uploader url", e)
-        }
+        try { return getUrlFromObject(playlistInfoItem.getObject("longBylineText")) } catch (e: Exception) { throw ParsingException("Could not get uploader url", e) }
     }
 
     @Throws(ParsingException::class)
     override fun isUploaderVerified(): Boolean {
-        try {
-            return isVerified(playlistInfoItem.getArray("ownerBadges"))
-        } catch (e: Exception) {
-            throw ParsingException("Could not get uploader verification info", e)
-        }
+        try { return isVerified(playlistInfoItem.getArray("ownerBadges")) } catch (e: Exception) { throw ParsingException("Could not get uploader verification info", e) }
     }
 
     @Throws(ParsingException::class)
@@ -83,10 +63,6 @@ open class YoutubePlaylistInfoItemExtractor(private val playlistInfoItem: JsonOb
 
         if (videoCountText == null) throw ParsingException("Could not get stream count")
 
-        try {
-            return removeNonDigitCharacters(videoCountText).toLong()
-        } catch (e: Exception) {
-            throw ParsingException("Could not get stream count", e)
-        }
+        try { return removeNonDigitCharacters(videoCountText).toLong() } catch (e: Exception) { throw ParsingException("Could not get stream count", e) }
     }
 }

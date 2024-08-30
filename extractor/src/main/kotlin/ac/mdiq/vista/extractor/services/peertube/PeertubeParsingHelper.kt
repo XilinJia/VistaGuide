@@ -80,11 +80,7 @@ object PeertubeParsingHelper {
     fun <I: InfoItem, E: InfoItemExtractor>collectItemsFrom(collector: InfoItemsCollector<I, E>, json: JsonObject?, baseUrl: String, sepia: Boolean = false) {
 
         val contents: JsonArray
-        try {
-            contents = getValue(json!!, "data") as JsonArray
-        } catch (e: Exception) {
-            throw ParsingException("Unable to extract list info", e)
-        }
+        try { contents = getValue(json!!, "data") as JsonArray } catch (e: Exception) { throw ParsingException("Unable to extract list info", e) }
 
         for (c in contents) {
             if (c is JsonObject) {

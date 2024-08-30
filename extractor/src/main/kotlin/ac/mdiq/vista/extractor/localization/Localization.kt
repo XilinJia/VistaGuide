@@ -10,10 +10,6 @@ class Localization @JvmOverloads constructor(
         @JvmField val languageCode: String,
         private val countryCode: String? = null) : Serializable {
 
-    fun getCountryCode(): String {
-        return countryCode ?: ""
-    }
-
     /**
      * Return a formatted string in the form of: `language-Country`, or
      * just `language` if country is `null`.
@@ -22,6 +18,10 @@ class Localization @JvmOverloads constructor(
      */
     val localizationCode: String
         get() = languageCode + (if (countryCode == null) "" else "-$countryCode")
+
+    fun getCountryCode(): String {
+        return countryCode ?: ""
+    }
 
     override fun toString(): String {
         return "Localization[$localizationCode]"

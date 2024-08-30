@@ -402,14 +402,10 @@ abstract class StreamExtractor(service: StreamingService, linkHandler: LinkHandl
     @Throws(ParsingException::class)
     protected fun getTimestampSeconds(regexPattern: String): Long {
         val timestamp: String
-        try {
-            timestamp = matchGroup1(regexPattern, originalUrl)
-        } catch (e: RegexException) {
-            // catch this instantly since a url does not necessarily have a timestamp
-            // -2 because the testing system will consequently know that the regex failed
-            // not good, I know
-            return -2
-        }
+        // catch this instantly since a url does not necessarily have a timestamp
+        // -2 because the testing system will consequently know that the regex failed
+        // not good, I know
+        try { timestamp = matchGroup1(regexPattern, originalUrl) } catch (e: RegexException) { return -2 }
 
         if (timestamp.isNotEmpty()) {
             try {
@@ -431,9 +427,7 @@ abstract class StreamExtractor(service: StreamingService, linkHandler: LinkHandl
                 val hours = if (hoursString.isEmpty()) 0 else hoursString.toInt()
 
                 return seconds + (60L * minutes) + (3600L * hours)
-            } catch (e: ParsingException) {
-                throw ParsingException("Could not get timestamp.", e)
-            }
+            } catch (e: ParsingException) { throw ParsingException("Could not get timestamp.", e) }
         } else return 0
     }
 

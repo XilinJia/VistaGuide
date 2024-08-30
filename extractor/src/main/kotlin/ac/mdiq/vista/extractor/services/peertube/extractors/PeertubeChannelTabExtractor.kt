@@ -45,11 +45,7 @@ class PeertubeChannelTabExtractor(service: StreamingService, linkHandler: ListLi
 
         var pageJson: JsonObject? = null
         if (response != null && response.responseBody().isNotEmpty()) {
-            try {
-                pageJson = JsonParser.`object`().from(response.responseBody())
-            } catch (e: Exception) {
-                throw ParsingException("Could not parse json data for account info", e)
-            }
+            try { pageJson = JsonParser.`object`().from(response.responseBody()) } catch (e: Exception) { throw ParsingException("Could not parse json data for account info", e) }
         }
 
         if (pageJson == null) {

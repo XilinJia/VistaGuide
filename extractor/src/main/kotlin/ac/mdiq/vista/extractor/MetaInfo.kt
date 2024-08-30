@@ -19,10 +19,7 @@ class MetaInfo : Serializable {
 
     private var urlTexts: MutableList<String> = ArrayList()
 
-    constructor(title: String,
-                content: Description,
-                urls: MutableList<URL>,
-                urlTexts: MutableList<String>) {
+    constructor(title: String, content: Description, urls: MutableList<URL>, urlTexts: MutableList<String>) {
         this.title = title
         this.content = content
         this.urls = urls

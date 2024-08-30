@@ -63,12 +63,6 @@ abstract class InfoItemsCollector<I : InfoItem, E : InfoItemExtractor>
     }
 
     override fun commit(extractor: E) {
-        try {
-            addItem(extract(extractor))
-        } catch (ae: FoundAdException) {
-            // found an ad. Maybe a debug line could be placed here
-        } catch (e: ParsingException) {
-            addError(e)
-        }
+        try { addItem(extract(extractor)) } catch (ae: FoundAdException) {/* found an ad. Maybe a debug line could be placed here */ } catch (e: ParsingException) { addError(e) }
     }
 }

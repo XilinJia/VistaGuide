@@ -89,11 +89,7 @@ class PeertubePlaylistExtractor(service: StreamingService, linkHandler: ListLink
 
         var json: JsonObject? = null
         if (response != null && response.responseBody().isNotEmpty()) {
-            try {
-                json = JsonParser.`object`().from(response.responseBody())
-            } catch (e: Exception) {
-                throw ParsingException("Could not parse json data for playlist info", e)
-            }
+            try { json = JsonParser.`object`().from(response.responseBody()) } catch (e: Exception) { throw ParsingException("Could not parse json data for playlist info", e) }
         }
 
         if (json != null) {

@@ -111,10 +111,7 @@ class YoutubeService(id: Int) : StreamingService(id, "YouTube",
                     }
                 }, h, YoutubeTrendingExtractor.KIOSK_ID)
             list.setDefaultKiosk(YoutubeTrendingExtractor.KIOSK_ID)
-        } catch (e: Exception) {
-            throw ExtractionException(e)
-        }
-
+        } catch (e: Exception) { throw ExtractionException(e) }
         return list
     }
 

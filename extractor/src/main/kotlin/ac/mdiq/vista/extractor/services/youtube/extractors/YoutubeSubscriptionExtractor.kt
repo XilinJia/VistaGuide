@@ -44,11 +44,7 @@ class YoutubeSubscriptionExtractor(youtubeService: YoutubeService)
     @Throws(ExtractionException::class)
     fun fromJsonInputStream(contentInputStream: InputStream): List<SubscriptionItem?> {
         val subscriptions: JsonArray
-        try {
-            subscriptions = JsonParser.array().from(contentInputStream)
-        } catch (e: JsonParserException) {
-            throw InvalidSourceException("Invalid json input stream", e)
-        }
+        try { subscriptions = JsonParser.array().from(contentInputStream) } catch (e: JsonParserException) { throw InvalidSourceException("Invalid json input stream", e) }
 
         var foundInvalidSubscription = false
         val subscriptionItems: MutableList<SubscriptionItem?> = ArrayList()
@@ -84,15 +80,11 @@ class YoutubeSubscriptionExtractor(youtubeService: YoutubeService)
                             // Return it only if it has items (it exits early if it's the wrong file
                             // format), otherwise try the next file
                             if (csvItems.isNotEmpty()) return csvItems
-                        } catch (e: ExtractionException) {
-                            // Ignore error and go to next file
-                        }
+                        } catch (e: ExtractionException) {/* Ignore error and go to next file */ }
                     }
                 }
             }
-        } catch (e: IOException) {
-            throw InvalidSourceException("Error reading contents of zip file", e)
-        }
+        } catch (e: IOException) { throw InvalidSourceException("Error reading contents of zip file", e) }
         throw InvalidSourceException("Unable to find a valid subscriptions.csv file (try extracting and selecting the csv file)")
     }
 

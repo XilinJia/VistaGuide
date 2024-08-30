@@ -7,10 +7,8 @@ import java.io.Serializable
 
 /**
  * Abstract class which represents streams in the extractor.
- */
-/**
- * Instantiates a new `Stream` object.
  *
+ * Instantiates a new `Stream` object.
  * @param id             the identifier which uniquely identifies the file, e.g. for YouTube
  * this would be the itag
  * @param content        the content or URL, depending on whether isUrl is true
@@ -35,15 +33,7 @@ abstract class Stream (
          */
         @JvmField val content: String,
         val isUrl: Boolean,
-        /**
-         * Gets the [MediaFormat], which can be null.
-         * @return the format
-         */
         val format: MediaFormat?,
-        /**
-         * Gets the [DeliveryMethod].
-         * @return the delivery method
-         */
         @JvmField val deliveryMethod: DeliveryMethod,
         /**
          * Gets the URL of the manifest this stream comes from (if applicable, otherwise null).
@@ -66,7 +56,6 @@ abstract class Stream (
 
     /**
      * Gets the URL of this stream if the content is a URL, or `null` otherwise.
-     *
      * @return the URL if the content is a URL, `null` otherwise
      */
     @Deprecated("Use {@link #getContent()} instead.")

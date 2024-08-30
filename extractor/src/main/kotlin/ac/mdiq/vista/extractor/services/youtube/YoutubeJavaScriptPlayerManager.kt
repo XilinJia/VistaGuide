@@ -83,13 +83,11 @@ object YoutubeJavaScriptPlayerManager {
             // Store the exception for future calls of this method, in order to improve performance
             sigTimestampExtractionEx = e
             throw e
-        } catch (e: NumberFormatException) {
-            sigTimestampExtractionEx = ParsingException("Could not convert signature timestamp to a number", e)
+        } catch (e: NumberFormatException) { sigTimestampExtractionEx = ParsingException("Could not convert signature timestamp to a number", e)
         } catch (e: Exception) {
             sigTimestampExtractionEx = ParsingException("Could not get signature timestamp", e)
             throw e
         }
-
         return cachedSignatureTimestamp!!
     }
 

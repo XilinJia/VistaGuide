@@ -57,10 +57,66 @@ open class YoutubeStreamInfoItemExtractor(
     : StreamInfoItemExtractor {
 
     private var cachedStreamType: StreamType? = null
+
     private var isPremiere: Boolean? = null
         get() {
             if (field == null) field = videoInfo.has("upcomingEventData")
             return field
+        }
+
+    @get:Throws(ParsingException::class)
+    override val url: String
+        get() {
+            try {
+                val videoId = videoInfo.getString("videoId") ?: ""
+                return YoutubeStreamLinkHandlerFactory.instance.getUrl(videoId)
+            } catch (e: Exception) {
+                throw ParsingException("Could not get url", e)
+            }
+        }
+
+    @get:Throws(ParsingException::class)
+    override val name: String
+        get() {
+            val name = getTextFromObject(videoInfo.getObject("title"))
+            if (!name.isNullOrEmpty()) return name
+            throw ParsingException("Could not get name")
+        }
+
+    @get:Throws(NumberFormatException::class, RegexException::class)
+    private val viewCountFromAccessibilityData: Long
+        get() {
+            // These approaches are language dependent
+            val videoInfoTitleAccessibilityData = videoInfo.getObject("title")
+                .getObject("accessibility")
+                .getObject("accessibilityData")
+                .getString("label", "")
+
+            if (videoInfoTitleAccessibilityData.lowercase(Locale.getDefault()).endsWith(NO_VIEWS_LOWERCASE)) return 0
+
+            return removeNonDigitCharacters(matchGroup1(ACCESSIBILITY_DATA_VIEW_COUNT_REGEX, videoInfoTitleAccessibilityData)).toLong()
+        }
+
+    @get:Throws(ParsingException::class)
+    override val thumbnails: List<Image>
+        get() = getThumbnailsFromInfoItem(videoInfo)
+
+    private val isPremium: Boolean
+        get() {
+            val badges = videoInfo.getArray("badges")
+            for (badge in badges) {
+                if ((badge as JsonObject).getObject("metadataBadgeRenderer").getString("label", "") == "Premium") return true
+            }
+            return false
+        }
+
+    @get:Throws(ParsingException::class)
+    private val dateFromPremiere: OffsetDateTime
+        get() {
+            val upcomingEventData = videoInfo.getObject("upcomingEventData")
+            val startTime = upcomingEventData.getString("startTime")
+
+            try { return OffsetDateTime.ofInstant(Instant.ofEpochSecond(startTime.toLong()), ZoneOffset.UTC) } catch (e: Exception) { throw ParsingException("Could not parse date from premiere: \"$startTime\"") }
         }
 
     override fun getStreamType(): StreamType {
@@ -97,25 +153,6 @@ open class YoutubeStreamInfoItemExtractor(
     override fun isAd(): Boolean {
         return isPremium || name == "[Private video]" || name == "[Deleted video]"
     }
-
-    @get:Throws(ParsingException::class)
-    override val url: String
-        get() {
-            try {
-                val videoId = videoInfo.getString("videoId") ?: ""
-                return YoutubeStreamLinkHandlerFactory.instance.getUrl(videoId)
-            } catch (e: Exception) {
-                throw ParsingException("Could not get url", e)
-            }
-        }
-
-    @get:Throws(ParsingException::class)
-    override val name: String
-        get() {
-            val name = getTextFromObject(videoInfo.getObject("title"))
-            if (!name.isNullOrEmpty()) return name
-            throw ParsingException("Could not get name")
-        }
 
     @Throws(ParsingException::class)
     override fun getDuration(): Long {
@@ -177,7 +214,6 @@ open class YoutubeStreamInfoItemExtractor(
 
         return url
     }
-
 
     @Throws(ParsingException::class)
     override fun getUploaderAvatars(): List<Image> {
@@ -282,47 +318,6 @@ open class YoutubeStreamInfoItemExtractor(
         return if (isMixedNumber) mixedNumberWordToLong(viewCountText)
         else removeNonDigitCharacters(viewCountText).toLong()
     }
-
-    @get:Throws(NumberFormatException::class, RegexException::class)
-    private val viewCountFromAccessibilityData: Long
-        get() {
-            // These approaches are language dependent
-            val videoInfoTitleAccessibilityData = videoInfo.getObject("title")
-                .getObject("accessibility")
-                .getObject("accessibilityData")
-                .getString("label", "")
-
-            if (videoInfoTitleAccessibilityData.lowercase(Locale.getDefault()).endsWith(NO_VIEWS_LOWERCASE)) return 0
-
-            return removeNonDigitCharacters(matchGroup1(ACCESSIBILITY_DATA_VIEW_COUNT_REGEX, videoInfoTitleAccessibilityData)).toLong()
-        }
-
-    @get:Throws(ParsingException::class)
-
-    override val thumbnails: List<Image>
-        get() = getThumbnailsFromInfoItem(videoInfo)
-
-    private val isPremium: Boolean
-        get() {
-            val badges = videoInfo.getArray("badges")
-            for (badge in badges) {
-                if ((badge as JsonObject).getObject("metadataBadgeRenderer").getString("label", "") == "Premium") return true
-            }
-            return false
-        }
-
-    @get:Throws(ParsingException::class)
-    private val dateFromPremiere: OffsetDateTime
-        get() {
-            val upcomingEventData = videoInfo.getObject("upcomingEventData")
-            val startTime = upcomingEventData.getString("startTime")
-
-            try {
-                return OffsetDateTime.ofInstant(Instant.ofEpochSecond(startTime.toLong()), ZoneOffset.UTC)
-            } catch (e: Exception) {
-                throw ParsingException("Could not parse date from premiere: \"$startTime\"")
-            }
-        }
 
     @Throws(ParsingException::class)
     override fun getShortDescription(): String? {

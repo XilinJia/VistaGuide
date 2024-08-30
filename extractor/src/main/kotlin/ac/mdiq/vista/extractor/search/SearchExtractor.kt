@@ -32,5 +32,4 @@ abstract class SearchExtractor(service: StreamingService, linkHandler: SearchQue
     }
 
     class NothingFoundException(message: String?) : ExtractionException(message)
-
 }

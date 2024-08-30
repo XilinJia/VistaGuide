@@ -10,11 +10,7 @@ object DownloaderFactory {
 
 
     val downloaderType: DownloaderType
-        get() = try {
-            DownloaderType.valueOf(System.getProperty("downloader"))
-        } catch (e: Exception) {
-            DEFAULT_DOWNLOADER
-        }
+        get() = try { DownloaderType.valueOf(System.getProperty("downloader")) } catch (e: Exception) { DEFAULT_DOWNLOADER }
 
     /**
      * Returns a implementation of a [Downloader].

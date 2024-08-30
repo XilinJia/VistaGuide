@@ -7,7 +7,6 @@ import ac.mdiq.vista.extractor.linkhandler.SearchQueryHandler
 import ac.mdiq.vista.extractor.utils.ExtractorHelper
 import java.io.IOException
 
-
 class SearchInfo(
         serviceId: Int,
         qIHandler: SearchQueryHandler,
@@ -31,34 +30,16 @@ class SearchInfo(
         fun getInfo(extractor: SearchExtractor): SearchInfo {
             val info = SearchInfo(extractor.serviceId, extractor.getLinkHandler(), extractor.searchString)
 
-            try {
-                info.originalUrl = extractor.originalUrl
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.searchSuggestion = extractor.searchSuggestion
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.isCorrectedSearch = extractor.isCorrectedSearch
-            } catch (e: Exception) {
-                info.addError(e)
-            }
-            try {
-                info.metaInfo = extractor.metaInfo
-            } catch (e: Exception) {
-                info.addError(e)
-            }
+            try { info.originalUrl = extractor.originalUrl } catch (e: Exception) { info.addError(e) }
+            try { info.searchSuggestion = extractor.searchSuggestion } catch (e: Exception) { info.addError(e) }
+            try { info.isCorrectedSearch = extractor.isCorrectedSearch } catch (e: Exception) { info.addError(e) }
+            try { info.metaInfo = extractor.metaInfo } catch (e: Exception) { info.addError(e) }
 
             val page = ExtractorHelper.getItemsPageOrLogError(info, extractor)
             info.relatedItems = (page.items)
             info.nextPage = page.nextPage
-
             return info
         }
-
 
         @Throws(IOException::class, ExtractionException::class)
         fun getMoreItems(service: StreamingService, query: SearchQueryHandler, page: Page?): InfoItemsPage<InfoItem> {

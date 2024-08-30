@@ -55,11 +55,7 @@ class SoundcloudPlaylistInfoItemExtractor(private val itemObject: JsonObject) : 
 
     @Throws(ParsingException::class)
     override fun getUploaderName(): String? {
-        try {
-            return itemObject.getObject(USER_KEY).getString("username")
-        } catch (e: Exception) {
-            throw ParsingException("Failed to extract playlist uploader", e)
-        }
+        try { return itemObject.getObject(USER_KEY).getString("username") } catch (e: Exception) { throw ParsingException("Failed to extract playlist uploader", e) }
     }
 
     override fun getUploaderUrl(): String? {

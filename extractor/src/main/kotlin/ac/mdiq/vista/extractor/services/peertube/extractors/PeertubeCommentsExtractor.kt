@@ -80,11 +80,7 @@ class PeertubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHa
         if (page.body == null) {
             val response = downloader.get(page.url)
             if (response != null && response.responseBody().isNotEmpty()) {
-                try {
-                    json = JsonParser.`object`().from(response.responseBody())
-                } catch (e: Exception) {
-                    throw ParsingException("Could not parse json data for comments info", e)
-                }
+                try { json = JsonParser.`object`().from(response.responseBody()) } catch (e: Exception) { throw ParsingException("Could not parse json data for comments info", e) }
             }
             if (json != null) {
                 validate(json)

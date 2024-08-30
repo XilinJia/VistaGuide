@@ -48,11 +48,7 @@ class PeertubeSearchExtractor @JvmOverloads constructor(
 
         var json: JsonObject? = null
         if (response != null && response.responseBody().isNotEmpty()) {
-            try {
-                json = JsonParser.`object`().from(response.responseBody())
-            } catch (e: Exception) {
-                throw ParsingException("Could not parse json data for search info", e)
-            }
+            try { json = JsonParser.`object`().from(response.responseBody()) } catch (e: Exception) { throw ParsingException("Could not parse json data for search info", e) }
         }
 
         if (json != null) {

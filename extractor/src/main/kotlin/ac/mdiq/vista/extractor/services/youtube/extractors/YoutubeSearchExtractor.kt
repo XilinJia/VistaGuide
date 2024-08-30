@@ -22,7 +22,6 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-
 /*
 * Created by Christian Schabesberger on 22.07.2018
 *
@@ -44,6 +43,7 @@ import java.util.*
 * along with Vista Guide.  If not, see <http://www.gnu.org/licenses/>.
 */
 class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQueryHandler) : SearchExtractor(service, linkHandler) {
+
     private val searchType: String?
     private val extractVideoResults: Boolean
     private val extractChannelResults: Boolean
@@ -51,38 +51,11 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
 
     private var initialData: JsonObject? = null
 
-    init {
-        val contentFilters: List<String?> = linkHandler.contentFilters
-        searchType = if (contentFilters.isEmpty()) null else contentFilters[0]
-        // Save whether we should extract video, channel and playlist results depending on the
-        // requested search type, as YouTube returns sometimes videos inside channel search results
-        // If no search type is provided or ALL filter is requested, extract everything
-        extractVideoResults = searchType == null || YoutubeSearchQueryHandlerFactory.ALL == searchType || YoutubeSearchQueryHandlerFactory.VIDEOS == searchType
-        extractChannelResults = searchType == null || YoutubeSearchQueryHandlerFactory.ALL == searchType || YoutubeSearchQueryHandlerFactory.CHANNELS == searchType
-        extractPlaylistResults = searchType == null || YoutubeSearchQueryHandlerFactory.ALL == searchType || YoutubeSearchQueryHandlerFactory.PLAYLISTS == searchType
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    override fun onFetchPage(downloader: Downloader) {
-        val query = super.searchString
-        val localization = extractorLocalization
-        val params = getSearchParameter(searchType)
-
-        val jsonBody = prepareDesktopJsonBuilder(localization, extractorContentCountry).value("query", query)
-        if (params.isNotEmpty()) { jsonBody.value("params", params) }
-
-        val body = JsonWriter.string(jsonBody.done()).toByteArray(StandardCharsets.UTF_8)
-
-        initialData = getJsonPostResponse("search", body, localization)
-    }
-
     @get:Throws(ParsingException::class)
-
     override val url: String
         get() = super.url + "&gl=" + extractorContentCountry.countryCode
 
     @get:Throws(ParsingException::class)
-
     override val searchSuggestion: String
         get() {
             val itemSectionRenderer = initialData!!.getObject("contents")
@@ -116,7 +89,6 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
         }
 
     @get:Throws(ParsingException::class)
-
     override val metaInfo: List<MetaInfo>
         get() = getMetaInfo(
             initialData!!.getObject("contents")
@@ -126,19 +98,15 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
                 .getArray("contents"))
 
     @get:Throws(IOException::class, ExtractionException::class)
-
     override val initialPage: InfoItemsPage<InfoItem>
         get() {
             val collector = MultiInfoItemsCollector(serviceId)
-
             val sections = initialData!!.getObject("contents")
                 .getObject("twoColumnSearchResultsRenderer")
                 .getObject("primaryContents")
                 .getObject("sectionListRenderer")
                 .getArray("contents")
-
             var nextPage: Page? = null
-
             for (section in sections) {
                 val sectionJsonObject = section as JsonObject
                 if (sectionJsonObject.has("itemSectionRenderer")) {
@@ -149,6 +117,30 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
             }
             return InfoItemsPage(collector, nextPage)
         }
+
+    init {
+        val contentFilters: List<String?> = linkHandler.contentFilters
+        searchType = if (contentFilters.isEmpty()) null else contentFilters[0]
+        // Save whether we should extract video, channel and playlist results depending on the
+        // requested search type, as YouTube returns sometimes videos inside channel search results
+        // If no search type is provided or ALL filter is requested, extract everything
+        extractVideoResults = searchType == null || YoutubeSearchQueryHandlerFactory.ALL == searchType || YoutubeSearchQueryHandlerFactory.VIDEOS == searchType
+        extractChannelResults = searchType == null || YoutubeSearchQueryHandlerFactory.ALL == searchType || YoutubeSearchQueryHandlerFactory.CHANNELS == searchType
+        extractPlaylistResults = searchType == null || YoutubeSearchQueryHandlerFactory.ALL == searchType || YoutubeSearchQueryHandlerFactory.PLAYLISTS == searchType
+    }
+
+    @Throws(IOException::class, ExtractionException::class)
+    override fun onFetchPage(downloader: Downloader) {
+        val query = super.searchString
+        val localization = extractorLocalization
+        val params = getSearchParameter(searchType)
+
+        val jsonBody = prepareDesktopJsonBuilder(localization, extractorContentCountry).value("query", query)
+        if (params.isNotEmpty()) { jsonBody.value("params", params) }
+
+        val body = JsonWriter.string(jsonBody.done()).toByteArray(StandardCharsets.UTF_8)
+        initialData = getJsonPostResponse("search", body, localization)
+    }
 
     @Throws(IOException::class, ExtractionException::class)
     override fun getPage(page: Page?): InfoItemsPage<InfoItem> {
@@ -182,15 +174,16 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
     @Throws(NothingFoundException::class)
     private fun collectStreamsFrom(collector: MultiInfoItemsCollector,  contents: JsonArray) {
         val timeAgoParser = timeAgoParser
-
         for (content in contents) {
             val item = content as JsonObject
+//            println("YoutubeSearchExtractor collectStreamsFrom $extractVideoResults $extractChannelResults $extractPlaylistResults item: ${item}")
             when {
                 item.has("backgroundPromoRenderer") -> throw NothingFoundException(getTextFromObject(item.getObject("backgroundPromoRenderer").getObject("bodyText")))
                 extractVideoResults && item.has("videoRenderer") -> collector.commit(YoutubeStreamInfoItemExtractor(item.getObject("videoRenderer"), timeAgoParser))
                 extractChannelResults && item.has("channelRenderer") -> collector.commit(YoutubeChannelInfoItemExtractor(item.getObject("channelRenderer")))
                 extractPlaylistResults && item.has("playlistRenderer") -> collector.commit(YoutubePlaylistInfoItemExtractor(item.getObject("playlistRenderer")))
             }
+//            println("YoutubeSearchExtractor collectStreamsFrom collector: ${collector.getItems().size}")
         }
     }
 

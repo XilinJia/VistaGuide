@@ -141,8 +141,6 @@ class ItagItem : Serializable {
     /**
      * Get the `audioTrackId` of the stream, if present.
      * @return the `audioTrackId` of the stream or null
-     */
-    /**
      * Set the `audioTrackId` of the stream.
      * @param audioTrackId the `audioTrackId` of the stream
      */

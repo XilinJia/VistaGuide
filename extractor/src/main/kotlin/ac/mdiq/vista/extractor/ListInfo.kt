@@ -11,13 +11,7 @@ abstract class ListInfo<T : InfoItem> : Info {
     val contentFilters: List<String>
     val sortFilter: String
 
-    constructor(serviceId: Int,
-                id: String,
-                url: String,
-                originalUrl: String,
-                name: String,
-                contentFilter: List<String>,
-                sortFilter: String)
+    constructor(serviceId: Int, id: String, url: String, originalUrl: String, name: String, contentFilter: List<String>, sortFilter: String)
             : super(serviceId, id, url, originalUrl, name) {
         this.contentFilters = contentFilter
         this.sortFilter = sortFilter

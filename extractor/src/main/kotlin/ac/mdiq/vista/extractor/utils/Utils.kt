@@ -27,7 +27,6 @@ object Utils {
      * @param string The string to be encoded.
      * @return The encoded URL.
      */
-
     fun encodeUrlUtf8(string: String?): String {
         // TODO: Switch to URLEncoder.encode(String, Charset) in Java 10.
         return URLEncoder.encode(string, StandardCharsets.UTF_8.name())
@@ -38,7 +37,6 @@ object Utils {
      * @param url The URL to be decoded.
      * @return The decoded URL.
      */
-
     fun decodeUrlUtf8(url: String?): String {
         // TODO: Switch to URLDecoder.decode(String, Charset) in Java 10.
         return URLDecoder.decode(url, StandardCharsets.UTF_8.name())
@@ -55,8 +53,6 @@ object Utils {
      * @param toRemove string to remove non-digit chars
      * @return a string that contains only digits
      */
-
-
     fun removeNonDigitCharacters(toRemove: String): String {
         return toRemove.replace("\\D+".toRegex(), "")
     }
@@ -70,18 +66,13 @@ object Utils {
      *  * 1.23K -&gt; 1230
      *  * 1.23M -&gt; 1230000
      *
-     *
      * @param numberWord string to be converted to a long
      * @return a long
      */
-
     @Throws(NumberFormatException::class, ParsingException::class)
     fun mixedNumberWordToLong(numberWord: String?): Long {
         var multiplier = ""
-        try {
-            multiplier = matchGroup("[\\d]+([\\.,][\\d]+)?([KMBkmb])+", numberWord!!, 2)
-        } catch (ignored: ParsingException) {
-        }
+        try { multiplier = matchGroup("[\\d]+([\\.,][\\d]+)?([KMBkmb])+", numberWord!!, 2) } catch (ignored: ParsingException) { }
         val count = matchGroup1("([\\d]+([\\.,][\\d]+)?)", numberWord!!).replace(",", ".").toDouble()
         return when (multiplier.uppercase(Locale.getDefault())) {
             "K" -> (count * 1e3).toLong()
@@ -97,14 +88,12 @@ object Utils {
      * @param pattern the pattern that will be used to check the url
      * @param url     the url to be tested
      */
-
     @Throws(ParsingException::class)
     fun checkUrl(pattern: String, url: String) {
         require(!url.isNullOrEmpty()) { "Url can't be null or empty" }
 
         if (!isMatch(pattern, url.lowercase(Locale.getDefault()))) throw ParsingException("Url don't match the pattern")
     }
-
 
     fun replaceHttpWithHttps(url: String): String {
         if (url.startsWith(HTTP)) return HTTPS + url.substring(HTTP.length)
@@ -121,7 +110,6 @@ object Utils {
      * @return a string that contains the value of the query parameter or `null` if nothing
      * was found
      */
-
     fun getQueryValue(url: URL, parameterName: String): String? {
         val urlQuery = url.query
 
@@ -144,8 +132,6 @@ object Utils {
      * @param url the string to be converted to a URL-Object
      * @return a [URL object][URL] containing the url
      */
-
-
     @Throws(MalformedURLException::class)
     fun stringToURL(url: String): URL {
         try {
@@ -157,7 +143,6 @@ object Utils {
         }
     }
 
-
     fun isHTTP(url: URL): Boolean {
         // Make sure it's HTTP or HTTPS
         val protocol = url.protocol
@@ -168,14 +153,11 @@ object Utils {
         return setsNoPort || usesDefaultPort
     }
 
-
     fun removeMAndWWWFromUrl(url: String): String {
         if (M_PATTERN.matcher(url).find()) return url.replace("m.", "")
         if (WWW_PATTERN.matcher(url).find()) return url.replace("www.", "")
         return url
     }
-
-
 
     fun removeUTF8BOM(s: String): String {
         var result = s
@@ -183,8 +165,6 @@ object Utils {
         if (result.endsWith("\uFEFF")) result = result.substring(0, result.length - 1)
         return result
     }
-
-
 
     @Throws(ParsingException::class)
     fun getBaseUrl(url: String): String {
@@ -207,7 +187,6 @@ object Utils {
      * @param url the url which can possibly be a Google search redirect
      * @return an url with no Google search redirects
      */
-
     fun followGoogleRedirectIfNeeded(url: String): String {
         // If the url is a redirect from a Google search, extract the actual URL
         try {
@@ -228,7 +207,6 @@ object Utils {
     /**
      * Concatenate all non-null, non-empty and strings which are not equal to `"null"`.
      */
-
     fun nonEmptyAndNullJoin(delimiter: CharSequence?, vararg elements: String): String {
         return Arrays.stream(elements)
             .filter { s: String -> !s.isNullOrEmpty() && s != "null" }
@@ -244,7 +222,6 @@ object Utils {
      * @return the result
      * @throws Parser.RegexException if none of the patterns match the input
      */
-
     @Throws(RegexException::class)
     fun getStringResultFromRegexArray(input: String, regexes: Array<String?>): String {
         return getStringResultFromRegexArray(input, regexes, 0)
@@ -259,8 +236,6 @@ object Utils {
      * @return the result
      * @throws Parser.RegexException if none of the patterns match the input
      */
-
-
     @Throws(RegexException::class)
     fun getStringResultFromRegexArray(input: String, regexes: Array<Pattern?>): String {
         return getStringResultFromRegexArray(input, regexes, 0)
@@ -277,7 +252,6 @@ object Utils {
      * @throws Parser.RegexException if none of the patterns match the input, or at least in the
      * specified group
      */
-
     @Throws(RegexException::class)
     fun getStringResultFromRegexArray(input: String, regexes: Array<String?>, group: Int): String {
 //        return getStringResultFromRegexArray(input,
@@ -299,8 +273,6 @@ object Utils {
      * @throws Parser.RegexException if none of the patterns match the input, or at least in the
      * specified group
      */
-
-
     @Throws(RegexException::class)
     fun getStringResultFromRegexArray(input: String, regexes: Array<Pattern?>, group: Int): String {
         for (regex in regexes) {
@@ -309,10 +281,8 @@ object Utils {
                 if (result != null) return result
 
                 // Continue if the result is null
-            } catch (ignored: RegexException) {
-            }
+            } catch (ignored: RegexException) { }
         }
-
         throw RegexException("No regex matched the input on group $group")
     }
 }

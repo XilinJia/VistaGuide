@@ -48,13 +48,9 @@ object YoutubeMetaInfoHelper {
         metaInfo.content = Description(sb.toString(), Description.HTML)
         if (infoPanelContentRenderer.has("sourceEndpoint")) {
             val metaInfoLinkUrl = getUrlFromNavigationEndpoint(infoPanelContentRenderer.getObject("sourceEndpoint"))
-            try {
-                metaInfo.addUrl(URL(Objects.requireNonNull(extractCachedUrlIfNeeded(metaInfoLinkUrl))))
-            } catch (e: NullPointerException) {
-                throw ParsingException("Could not get metadata info URL", e)
-            } catch (e: MalformedURLException) {
-                throw ParsingException("Could not get metadata info URL", e)
-            }
+            try { metaInfo.addUrl(URL(Objects.requireNonNull(extractCachedUrlIfNeeded(metaInfoLinkUrl))))
+            } catch (e: NullPointerException) { throw ParsingException("Could not get metadata info URL", e)
+            } catch (e: MalformedURLException) { throw ParsingException("Could not get metadata info URL", e) }
 
             val metaInfoLinkText = getTextFromObject(infoPanelContentRenderer.getObject("inlineSource"))
             if (metaInfoLinkText.isNullOrEmpty()) throw ParsingException("Could not get metadata info link text.")
@@ -79,11 +75,8 @@ object YoutubeMetaInfoHelper {
             try {
                 val url = getUrlFromNavigationEndpoint(actionButton.getObject("command"))
                 metaInfo.addUrl(URL(Objects.requireNonNull(extractCachedUrlIfNeeded(url))))
-            } catch (e: NullPointerException) {
-                throw ParsingException("Could not get metadata info URL", e)
-            } catch (e: MalformedURLException) {
-                throw ParsingException("Could not get metadata info URL", e)
-            }
+            } catch (e: NullPointerException) { throw ParsingException("Could not get metadata info URL", e)
+            } catch (e: MalformedURLException) { throw ParsingException("Could not get metadata info URL", e) }
 
             val metaInfoLinkText = getTextFromObject(actionButton.getObject("text"))
             if (metaInfoLinkText.isNullOrEmpty()) throw ParsingException("Could not get metadata info link text.")
@@ -98,9 +91,7 @@ object YoutubeMetaInfoHelper {
                     metaInfo.addUrl(URL(url))
                     val description = getTextFromObject(clarificationRenderer.getObject("secondarySource"))
                     metaInfo.addUrlText(description ?: url)
-                } catch (e: MalformedURLException) {
-                    throw ParsingException("Could not get metadata info secondary URL", e)
-                }
+                } catch (e: MalformedURLException) { throw ParsingException("Could not get metadata info secondary URL", e) }
             }
         }
 
@@ -155,11 +146,7 @@ object YoutubeMetaInfoHelper {
             // usually the webpage of the association
             val url = getUrlFromNavigationEndpoint(r.getObject("navigationEndpoint")) ?: throw ParsingException("Could not extract emergency renderer url")
 
-            try {
-                metaInfo.addUrl(URL(replaceHttpWithHttps(url)))
-            } catch (e: MalformedURLException) {
-                throw ParsingException("Could not parse emergency renderer url", e)
-            }
+            try { metaInfo.addUrl(URL(replaceHttpWithHttps(url))) } catch (e: MalformedURLException) { throw ParsingException("Could not parse emergency renderer url", e) }
             addMetaInfo.accept(metaInfo)
         }
     }

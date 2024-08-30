@@ -12,20 +12,12 @@ class SoundcloudChannelLinkHandlerFactory private constructor() : ListLinkHandle
     override fun getId(url: String): String {
         checkUrl(URL_PATTERN, url)
 
-        try {
-            return SoundcloudParsingHelper.resolveIdWithWidgetApi(url)
-        } catch (e: Exception) {
-            throw ParsingException(e.message, e)
-        }
+        try { return SoundcloudParsingHelper.resolveIdWithWidgetApi(url) } catch (e: Exception) { throw ParsingException(e.message, e) }
     }
 
     @Throws(ParsingException::class, UnsupportedOperationException::class)
     override fun getUrl(id: String, contentFilters: List<String>, sortFilter: String?): String {
-        try {
-            return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer("https://api.soundcloud.com/users/$id")
-        } catch (e: Exception) {
-            throw ParsingException(e.message, e)
-        }
+        try { return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer("https://api.soundcloud.com/users/$id") } catch (e: Exception) { throw ParsingException(e.message, e) }
     }
 
     override fun onAcceptUrl(url: String): Boolean {

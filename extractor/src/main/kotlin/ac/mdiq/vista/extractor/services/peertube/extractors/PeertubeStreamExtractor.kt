@@ -326,11 +326,7 @@ class PeertubeStreamExtractor(service: StreamingService, linkHandler: LinkHandle
     @Throws(ParsingException::class)
     private fun collectStreamsFrom(collector: StreamInfoItemsCollector, jsonObject: JsonObject) {
         val contents: JsonArray
-        try {
-            contents = getValue(jsonObject, "data") as JsonArray
-        } catch (e: Exception) {
-            throw ParsingException("Could not extract related videos", e)
-        }
+        try { contents = getValue(jsonObject, "data") as JsonArray } catch (e: Exception) { throw ParsingException("Could not extract related videos", e) }
 
         for (c in contents) {
             if (c is JsonObject) {

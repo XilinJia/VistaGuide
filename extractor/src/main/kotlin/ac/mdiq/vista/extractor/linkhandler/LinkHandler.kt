@@ -9,9 +9,9 @@ open class LinkHandler(
         @JvmField val url: String,
         @JvmField val id: String) : Serializable {
 
-    constructor(handler: LinkHandler) : this(handler.originalUrl, handler.url, handler.id)
-
     @get:Throws(ParsingException::class)
     val baseUrl: String
         get() = getBaseUrl(url)
+
+    constructor(handler: LinkHandler) : this(handler.originalUrl, handler.url, handler.id)
 }

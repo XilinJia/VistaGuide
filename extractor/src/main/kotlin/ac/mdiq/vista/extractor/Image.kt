@@ -27,7 +27,6 @@ import java.util.*
  *
  */
 class Image(
-
         /**
          * Get the URL of this [Image].
          * @return the [Image]'s URL.
@@ -118,7 +117,6 @@ class Image(
              * @return the [ResolutionLevel] corresponding to the height provided. See the
              * [ResolutionLevel] values for details about what value is returned.
              */
-
             fun fromHeight(heightPx: Int): ResolutionLevel {
                 if (heightPx <= 0) return UNKNOWN
                 if (heightPx < 175) return LOW

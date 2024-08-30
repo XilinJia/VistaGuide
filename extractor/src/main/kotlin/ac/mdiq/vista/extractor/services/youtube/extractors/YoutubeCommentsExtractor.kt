@@ -60,20 +60,14 @@ class YoutubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHan
             .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
             .map { obj: Any? -> JsonObject::class.java.cast(obj) } // Check if the comment-section is present
             .filter { jObj: JsonObject? ->
-                try {
-                    return@filter "comments-section" == getString(jObj!!, "itemSectionRenderer.targetId")
-                } catch (ignored: ParsingException) {
-                    return@filter false
-                }
+                try { return@filter "comments-section" == getString(jObj!!, "itemSectionRenderer.targetId") } catch (ignored: ParsingException) { return@filter false }
             }
             .findFirst() // Extract the token (or null in case of error)
             .map { itemSectionRenderer: JsonObject ->
                 try {
                     return@map getString(itemSectionRenderer.getObject("itemSectionRenderer").getArray("contents").getObject(0),
                         "continuationItemRenderer.continuationEndpoint" + ".continuationCommand.token")
-                } catch (ignored: ParsingException) {
-                    return@map null
-                }
+                } catch (ignored: ParsingException) { return@map null }
             }
             .orElse(null)
 
@@ -83,11 +77,7 @@ class YoutubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHan
     }
 
     private fun getJsonContents(nextResponse: JsonObject): JsonArray? {
-        return try {
-            getArray(nextResponse, "contents.twoColumnWatchNextResults.results.results.contents")
-        } catch (e: ParsingException) {
-            null
-        }
+        return try { getArray(nextResponse, "contents.twoColumnWatchNextResults.results.results.contents") } catch (e: ParsingException) { null }
     }
 
 
@@ -121,9 +111,7 @@ class YoutubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHan
             continuationItemsArray = endpoint
                 .getObject("reloadContinuationItemsCommand", endpoint.getObject("appendContinuationItemsAction"))
                 .getArray("continuationItems")
-        } catch (e: Exception) {
-            return null
-        }
+        } catch (e: Exception) { return null }
         // Prevent ArrayIndexOutOfBoundsException
         if (continuationItemsArray.isEmpty()) return null
 
@@ -134,11 +122,7 @@ class YoutubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHan
         val jsonPath = if (continuationItemRenderer.has("button")) "button.buttonRenderer.command.continuationCommand.token" else "continuationEndpoint.continuationCommand.token"
 
         val continuation: String
-        try {
-            continuation = getString(continuationItemRenderer, jsonPath)
-        } catch (e: Exception) {
-            return null
-        }
+        try { continuation = getString(continuationItemRenderer, jsonPath) } catch (e: Exception) { return null }
         return getNextPage(continuation)
     }
 
@@ -185,14 +169,10 @@ class YoutubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHan
         }
 
         val contents: JsonArray
-        try {
-            // A copy of the array is needed, otherwise the continuation item is removed from the
-            // original object which is used to get the continuation
-            contents = JsonArray(getArray(commentsEndpoint, path))
-        } catch (e: Exception) {
-            // No comments
-            return
-        }
+        // A copy of the array is needed, otherwise the continuation item is removed from the
+        // original object which is used to get the continuation
+        // No comments
+        try { contents = JsonArray(getArray(commentsEndpoint, path)) } catch (e: Exception) { return }
 
         val index = contents.size - 1
         if (!contents.isEmpty() && contents.getObject(index).has("continuationItemRenderer")) contents.removeAt(index)
@@ -284,11 +264,7 @@ class YoutubeCommentsExtractor(service: StreamingService, uiHandler: ListLinkHan
                 .getObject("commentsHeaderRenderer")
                 .getObject("countText")
 
-            try {
-                return removeNonDigitCharacters(getTextFromObject(countText)!!).toInt()
-            } catch (e: Exception) {
-                throw ExtractionException("Unable to get comments count", e)
-            }
+            try { return removeNonDigitCharacters(getTextFromObject(countText)!!).toInt() } catch (e: Exception) { throw ExtractionException("Unable to get comments count", e) }
         }
 
     companion object {

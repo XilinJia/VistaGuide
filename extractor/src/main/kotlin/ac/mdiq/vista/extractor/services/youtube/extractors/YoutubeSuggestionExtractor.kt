@@ -66,8 +66,6 @@ class YoutubeSuggestionExtractor(service: StreamingService) : SuggestionExtracto
                 .map { suggestion: JsonArray -> suggestion.getString(0) } // 0 is the search suggestion
                 .filter { suggestion: String? -> !suggestion.isNullOrEmpty() } // Filter blank suggestions
                 .collect(Collectors.toUnmodifiableList())
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse JSON response", e)
-        }
+        } catch (e: JsonParserException) { throw ParsingException("Could not parse JSON response", e) }
     }
 }

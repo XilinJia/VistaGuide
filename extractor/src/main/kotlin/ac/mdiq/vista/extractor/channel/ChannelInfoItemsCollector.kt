@@ -30,31 +30,11 @@ class ChannelInfoItemsCollector(serviceId: Int) : InfoItemsCollector<ChannelInfo
         val resultItem = ChannelInfoItem(serviceId, extractor.url, extractor.name?:"")
 
         // optional information
-        try {
-            resultItem.subscriberCount = extractor.getSubscriberCount()
-        } catch (e: Exception) {
-            addError(e)
-        }
-        try {
-            resultItem.streamCount = extractor.getStreamCount()
-        } catch (e: Exception) {
-            addError(e)
-        }
-        try {
-            resultItem.thumbnails = (extractor.thumbnails)
-        } catch (e: Exception) {
-            addError(e)
-        }
-        try {
-            resultItem.description = extractor.getDescription()
-        } catch (e: Exception) {
-            addError(e)
-        }
-        try {
-            resultItem.isVerified = extractor.isVerified()
-        } catch (e: Exception) {
-            addError(e)
-        }
+        try { resultItem.subscriberCount = extractor.getSubscriberCount() } catch (e: Exception) { addError(e) }
+        try { resultItem.streamCount = extractor.getStreamCount() } catch (e: Exception) { addError(e) }
+        try { resultItem.thumbnails = (extractor.thumbnails) } catch (e: Exception) { addError(e) }
+        try { resultItem.description = extractor.getDescription() } catch (e: Exception) { addError(e) }
+        try { resultItem.isVerified = extractor.isVerified() } catch (e: Exception) { addError(e) }
 
         return resultItem
     }

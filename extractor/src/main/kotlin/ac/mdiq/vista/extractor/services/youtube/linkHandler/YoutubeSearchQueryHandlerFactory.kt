@@ -7,6 +7,17 @@ import ac.mdiq.vista.extractor.utils.Utils.encodeUrlUtf8
 
 class YoutubeSearchQueryHandlerFactory : SearchQueryHandlerFactory() {
 
+    override val availableContentFilter: Array<String>
+        get() = arrayOf(ALL,
+            VIDEOS,
+            CHANNELS,
+            PLAYLISTS,
+            MUSIC_SONGS,
+            MUSIC_VIDEOS,
+            MUSIC_ALBUMS,
+            MUSIC_PLAYLISTS // MUSIC_ARTISTS
+        )
+
     @Throws(ParsingException::class, UnsupportedOperationException::class)
     override fun getUrl(id: String, contentFilters: List<String>, sortFilter: String?): String {
         val contentFilter = if (contentFilters.isNotEmpty()) contentFilters[0] else ""
@@ -19,19 +30,7 @@ class YoutubeSearchQueryHandlerFactory : SearchQueryHandlerFactory() {
         }
     }
 
-    override val availableContentFilter: Array<String>
-        get() = arrayOf(ALL,
-            VIDEOS,
-            CHANNELS,
-            PLAYLISTS,
-            MUSIC_SONGS,
-            MUSIC_VIDEOS,
-            MUSIC_ALBUMS,
-            MUSIC_PLAYLISTS // MUSIC_ARTISTS
-        )
-
     companion object {
-
         val instance: YoutubeSearchQueryHandlerFactory = YoutubeSearchQueryHandlerFactory()
 
         const val ALL: String = "all"
@@ -47,8 +46,6 @@ class YoutubeSearchQueryHandlerFactory : SearchQueryHandlerFactory() {
 
         private const val SEARCH_URL = "https://www.youtube.com/results?search_query="
         private const val MUSIC_SEARCH_URL = "https://music.youtube.com/search?q="
-
-
 
         fun getSearchParameter(contentFilter: String?): String {
             if (contentFilter.isNullOrEmpty()) return "8AEB"

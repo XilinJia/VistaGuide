@@ -65,11 +65,7 @@ class YoutubeMusicSearchExtractor(service: StreamingService, linkHandler: Search
                 // @formatter:on
         val responseBody = getValidJsonResponseBody(downloader.postWithContentTypeJson(url, youtubeMusicHeaders, json))
 
-        try {
-            initialData = JsonParser.`object`().from(responseBody)
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse JSON", e)
-        }
+        try { initialData = JsonParser.`object`().from(responseBody) } catch (e: JsonParserException) { throw ParsingException("Could not parse JSON", e) }
     }
 
     private val itemSectionRendererContents: List<JsonObject>
@@ -172,11 +168,7 @@ class YoutubeMusicSearchExtractor(service: StreamingService, linkHandler: Search
         val responseBody = getValidJsonResponseBody(downloader.postWithContentTypeJson(page.url, youtubeMusicHeaders, json))
 
         val ajaxJson: JsonObject
-        try {
-            ajaxJson = JsonParser.`object`().from(responseBody)
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse JSON", e)
-        }
+        try { ajaxJson = JsonParser.`object`().from(responseBody) } catch (e: JsonParserException) { throw ParsingException("Could not parse JSON", e) }
 
         val musicShelfContinuation = ajaxJson.getObject("continuationContents").getObject("musicShelfContinuation")
 
