@@ -1,8 +1,5 @@
 package ac.mdiq.vista.extractor.services.youtube.extractors
 
-import com.grack.nanojson.JsonArray
-import com.grack.nanojson.JsonObject
-import com.grack.nanojson.JsonWriter
 import ac.mdiq.vista.extractor.InfoItem
 import ac.mdiq.vista.extractor.MultiInfoItemsCollector
 import ac.mdiq.vista.extractor.Page
@@ -14,13 +11,13 @@ import ac.mdiq.vista.extractor.exceptions.ExtractionException
 import ac.mdiq.vista.extractor.exceptions.ParsingException
 import ac.mdiq.vista.extractor.linkhandler.ListLinkHandler
 import ac.mdiq.vista.extractor.localization.TimeAgoParser
+import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.ChannelHeader
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.getChannelAgeGateRenderer
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.getChannelHeader
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.getChannelId
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.getChannelName
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.getChannelResponse
-import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.isChannelVerified
 import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.resolveChannelId
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.DISABLE_PRETTY_PRINT_PARAMETER
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.YOUTUBEI_V1_URL
@@ -28,6 +25,9 @@ import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getJsonPost
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.prepareDesktopJsonBuilder
 import ac.mdiq.vista.extractor.services.youtube.linkHandler.YoutubeChannelTabLinkHandlerFactory
 import ac.mdiq.vista.extractor.services.youtube.linkHandler.YoutubeChannelTabLinkHandlerFactory.Companion.getUrlSuffix
+import com.grack.nanojson.JsonArray
+import com.grack.nanojson.JsonObject
+import com.grack.nanojson.JsonWriter
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -41,17 +41,11 @@ import java.util.*
  *
  */
 open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: ListLinkHandler) : ChannelTabExtractor(service, linkHandler) {
-    /**
-     * Whether the visitor data extracted from the initial channel response is required to be used for continuations.
-     * A valid `visitorData` is required to get continuations of shorts in channels.
-     * It should be not used when it is not needed, in order to reduce YouTube's tracking.
-     *
-     */
-    private val useVisitorData = getName() == ChannelTabs.SHORTS
+    protected open var channelHeader: ChannelHeader? = null
+
     private var jsonResponse: JsonObject? = null
     private var channelId: String? = null
     private var visitorData: String? = null
-    protected open var channelHeader: ChannelHeader? = null
 
     @get:Throws(ParsingException::class)
 
@@ -76,7 +70,6 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
         jsonResponse = data.jsonResponse
         channelHeader = getChannelHeader(jsonResponse!!)
         channelId = data.channelId
-        if (useVisitorData) visitorData = jsonResponse!!.getObject("responseContext").getString("visitorData")
     }
 
     @get:Throws(ParsingException::class)
@@ -95,7 +88,7 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
 
     @get:Throws(ParsingException::class)
     protected open val channelName: String
-        get() = getChannelName(channelHeader!!, jsonResponse!!, getChannelAgeGateRenderer(jsonResponse!!))
+        get() = if (channelHeader == null || jsonResponse == null) "" else getChannelName(channelHeader!!, getChannelAgeGateRenderer(jsonResponse!!), jsonResponse!!)
 
     @get:Throws(IOException::class, ExtractionException::class)
 
@@ -123,10 +116,10 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
                     if (items.isEmpty()) items = tabContent.getObject("sectionListRenderer").getArray("contents")
                 }
             }
-
-            val verifiedStatus = channelHeader?.let { header: ChannelHeader ->
-                if (isChannelVerified(header)) VerifiedStatus.VERIFIED else VerifiedStatus.UNVERIFIED }
-                ?: VerifiedStatus.UNKNOWN
+            val verifiedStatus = if (channelHeader == null) VerifiedStatus.UNKNOWN
+            else {
+                if (YoutubeChannelHelper.isChannelVerified(channelHeader!!)) VerifiedStatus.VERIFIED else VerifiedStatus.UNVERIFIED
+            }
 
             // If a channel tab is fetched, the next page requires channel ID and name, as channel
             // streams don't have their channel specified.
@@ -136,10 +129,7 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
             val channelUrl = url
 
             val continuation = collectItemsFrom(collector, items, verifiedStatus, channelName, channelUrl).orElse(null)
-
-            val nextPage = getNextPageFrom(continuation,
-                if (useVisitorData && !visitorData.isNullOrEmpty()) listOf(channelName, channelUrl, verifiedStatus.toString(), visitorData)
-                else listOf(channelName, channelUrl, verifiedStatus.toString()))
+            val nextPage = getNextPageFrom(continuation, listOf(channelName, channelUrl, verifiedStatus.toString()))
 
             return InfoItemsPage(collector, nextPage)
         }
@@ -148,7 +138,7 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
     override fun getPage(page: Page?): InfoItemsPage<InfoItem> {
         require(!(page?.url.isNullOrEmpty())) { "Page doesn't contain an URL" }
 
-        val channelIds: List<String?>? = page!!.ids
+        val channelIds: List<String?>? = page.ids
         val collector = MultiInfoItemsCollector(serviceId)
         val ajaxJson = getJsonPostResponse("browse", page.body, extractorLocalization)
 
@@ -239,6 +229,7 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
                         commitVideo(collector, timeAgoParser, richItem.getObject("videoRenderer"), channelVerifiedStatus, channelName, channelUrl)
                     richItem.has("reelItemRenderer") ->
                         commitReel(collector, richItem.getObject("reelItemRenderer"), channelVerifiedStatus, channelName, channelUrl)
+                    richItem.has("shortsLockupViewModel") -> commitShortsLockup(collector, richItem.getObject("shortsLockupViewModel"), channelVerifiedStatus, channelName, channelUrl)
                     richItem.has("playlistRenderer") ->
                         commitPlaylist(collector, richItem.getObject("playlistRenderer"), channelVerifiedStatus, channelName, channelUrl)
                 }
@@ -257,6 +248,11 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
                 return collectItemsFrom(collector, item.getObject("horizontalListRenderer").getArray("items"), channelVerifiedStatus, channelName, channelUrl)
             item.has("expandedShelfContentsRenderer") ->
                 return collectItemsFrom(collector, item.getObject("expandedShelfContentsRenderer").getArray("items"), channelVerifiedStatus, channelName, channelUrl)
+            item.has("lockupViewModel") -> {
+                val lockupViewModel = item.getObject("lockupViewModel")
+                if ("LOCKUP_CONTENT_TYPE_PLAYLIST" == lockupViewModel.getString("contentType"))
+                    commitPlaylistLockup(collector, lockupViewModel, channelVerifiedStatus, channelName, channelUrl)
+            }
             item.has("continuationItemRenderer") -> return Optional.ofNullable(item.getObject("continuationItemRenderer"))
         }
 
@@ -314,8 +310,7 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
         val continuationEndpoint = continuations.getObject("continuationEndpoint")
         val continuation = continuationEndpoint.getObject("continuationCommand").getString("token")
 
-        val body = JsonWriter.string(prepareDesktopJsonBuilder(extractorLocalization, extractorContentCountry,
-            if (useVisitorData && channelIds.size >= 3) channelIds[2] else null)
+        val body = JsonWriter.string(prepareDesktopJsonBuilder(extractorLocalization, extractorContentCountry)
             .value("continuation", continuation)
             .done())
             .toByteArray(StandardCharsets.UTF_8)
@@ -400,5 +395,41 @@ open class YoutubeChannelTabExtractor(service: StreamingService, linkHandler: Li
                 }
             })
         }
+        private fun commitShortsLockup(collector: MultiInfoItemsCollector, shortsLockupViewModel: JsonObject, channelVerifiedStatus: VerifiedStatus,
+                                       channelName: String?, channelUrl: String?) {
+            collector.commit(
+                object : YoutubeShortsLockupInfoItemExtractor(shortsLockupViewModel) {
+                    override fun getUploaderName(): String? {
+                        return if (channelName.isNullOrEmpty()) super.getUploaderName() else channelName
+                    }
+                    override fun getUploaderUrl(): String? {
+                        return if (channelUrl.isNullOrEmpty()) super.getUploaderName() else channelUrl
+                    }
+                    override fun isUploaderVerified(): Boolean {
+                        return channelVerifiedStatus === VerifiedStatus.VERIFIED
+                    }
+                })
+        }
+
+        private fun commitPlaylistLockup(collector: MultiInfoItemsCollector, playlistLockupViewModel: JsonObject, channelVerifiedStatus: VerifiedStatus,
+                                         channelName: String?, channelUrl: String?) {
+            collector.commit(
+                object : YoutubeMixOrPlaylistLockupInfoItemExtractor(playlistLockupViewModel) {
+                    override fun getUploaderName(): String? {
+                        return if (channelName.isNullOrEmpty()) super.getUploaderName() else channelName
+                    }
+                    override fun getUploaderUrl(): String? {
+                        return if (channelUrl.isNullOrEmpty()) super.getUploaderName() else channelUrl
+                    }
+                    override fun isUploaderVerified(): Boolean {
+                        return when (channelVerifiedStatus) {
+                            VerifiedStatus.VERIFIED -> true
+                            VerifiedStatus.UNVERIFIED -> false
+                            else -> super.isUploaderVerified()
+                        }
+                    }
+                })
+        }
+
     }
 }

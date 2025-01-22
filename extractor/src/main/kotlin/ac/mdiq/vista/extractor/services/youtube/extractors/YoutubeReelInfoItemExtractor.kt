@@ -14,14 +14,19 @@ import java.util.*
 
 
 /**
- * A [StreamInfoItemExtractor] for YouTube's `reelItemRenderers`.
+ * A {@link StreamInfoItemExtractor} for YouTube's {@code reelItemRenderer}s.
  *
- *
- *
- * `reelItemRenderers` are returned on YouTube for their short-form contents on almost every
+ * <p>
+ * {@code reelItemRenderer}s were returned on YouTube for their short-form contents on almost every
  * place and every major client. They provide a limited amount of information and do not provide
  * the exact view count, any uploader info (name, URL, avatar, verified status) and the upload date.
+ * </p>
  *
+ * <p>
+ * At the time this documentation has been updated, they are being replaced by
+ * {@code shortsLockupViewModel}s. See {@link YoutubeShortsLockupInfoItemExtractor} for an
+ * extractor for this new UI data type.
+ * </p>
  */
 open class YoutubeReelInfoItemExtractor(private val reelInfo: JsonObject) : StreamInfoItemExtractor {
     @get:Throws(ParsingException::class)

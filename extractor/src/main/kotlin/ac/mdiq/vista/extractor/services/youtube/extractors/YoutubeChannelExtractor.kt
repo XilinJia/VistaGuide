@@ -20,8 +20,6 @@
  */
 package ac.mdiq.vista.extractor.services.youtube.extractors
 
-import com.grack.nanojson.JsonArray
-import com.grack.nanojson.JsonObject
 import ac.mdiq.vista.extractor.Image
 import ac.mdiq.vista.extractor.StreamingService
 import ac.mdiq.vista.extractor.channel.ChannelExtractor
@@ -49,11 +47,12 @@ import ac.mdiq.vista.extractor.services.youtube.extractors.YoutubeChannelTabExtr
 import ac.mdiq.vista.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory
 import ac.mdiq.vista.extractor.services.youtube.linkHandler.YoutubeChannelTabLinkHandlerFactory
 import ac.mdiq.vista.extractor.utils.Utils.mixedNumberWordToLong
+import com.grack.nanojson.JsonArray
+import com.grack.nanojson.JsonObject
 import java.io.IOException
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Collectors
-
 
 
 class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHandler) : ChannelExtractor(service, linkHandler) {
@@ -107,6 +106,14 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
 
                         val urlSuffix = urlParts[urlParts.size - 1]
 
+                        /*
+                        Make a copy of the channelHeader member to avoid keeping a reference to
+                        this YoutubeChannelExtractor instance which would prevent serialization of
+                        the ReadyChannelTabListLinkHandler instance created above
+                         */
+                        val channelHeaderCopy: ChannelHeader? = if (channelHeader == null) null
+                        else ChannelHeader(channelHeader!!.json, channelHeader!!.headerType)
+
                         when (urlSuffix) {
                             "videos" ->                                 // Since the Videos tab has already its contents fetched, make
                                 // sure it is in the first position
@@ -114,7 +121,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
                                 tabs.add(0, ReadyChannelTabListLinkHandler(tabUrl, channelId!!, ChannelTabs.VIDEOS,
                                     object: ChannelTabExtractorBuilder {
                                         override fun build(service: StreamingService, linkHandler: ListLinkHandler): ChannelTabExtractor {
-                                            return VideosTabExtractor(service, linkHandler, tabRenderer, channelHeader, name, id, url)
+                                            return VideosTabExtractor(service, linkHandler, tabRenderer, channelHeaderCopy, name, id, url)
                                         }
                                     }))
 
@@ -180,13 +187,13 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
     override val id: String
         get() {
             assertPageFetched()
-            return getChannelId(channelHeader!!, jsonResponse!!, channelId!!)
+            return if (jsonResponse != null) getChannelId(channelHeader, jsonResponse!!, channelId) else ""
         }
 
     @Throws(ParsingException::class)
     override fun getName(): String {
         assertPageFetched()
-        return getChannelName(channelHeader!!, jsonResponse!!, channelAgeGateRenderer)
+        return if (jsonResponse != null) getChannelName(channelHeader, channelAgeGateRenderer, jsonResponse!!) else ""
     }
 
     @Throws(ParsingException::class)
@@ -258,16 +265,13 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
         if (channelAgeGateRenderer != null) return UNKNOWN_SUBSCRIBER_COUNT
 
         if (channelHeader != null) {
-            val header = channelHeader!!
-
             // No subscriber count is available on interactiveTabbedHeaderRenderer header
-            if (header.headerType == HeaderType.INTERACTIVE_TABBED) return UNKNOWN_SUBSCRIBER_COUNT
+            if (channelHeader!!.headerType == HeaderType.INTERACTIVE_TABBED) return UNKNOWN_SUBSCRIBER_COUNT
 
-            val headerJson = header.json
-            if (header.headerType == HeaderType.PAGE) return getSubscriberCountFromPageChannelHeader(headerJson)
+            val headerJson = channelHeader!!.json
+            if (channelHeader!!.headerType == HeaderType.PAGE) return getSubscriberCountFromPageChannelHeader(headerJson)
 
             var textObject: JsonObject? = null
-
             when {
                 headerJson.has("subscriberCountText") -> textObject = headerJson.getObject("subscriberCountText")
                 headerJson.has("subtitle") -> textObject = headerJson.getObject("subtitle")
@@ -327,8 +331,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
         if (channelAgeGateRenderer != null) return ""
 
         try {
-            if (channelHeader != null) {
-                val header = channelHeader!!
+            if (channelHeader?.headerType == HeaderType.INTERACTIVE_TABBED) {
                 /*
                 In an interactiveTabbedHeaderRenderer, the real description, is only available
                 in its header
@@ -337,7 +340,7 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
                 The description extracted is incomplete and the original one can be only
                 accessed from the About tab
                  */
-                if (header.headerType == HeaderType.INTERACTIVE_TABBED) return getTextFromObject(header.json.getObject("description")) ?:""
+                return getTextFromObject(channelHeader!!.json.getObject("description")) ?:""
             }
 
             return jsonResponse!!.getObject(METADATA)
@@ -364,7 +367,8 @@ class YoutubeChannelExtractor(service: StreamingService, linkHandler: ListLinkHa
         // Verified status is unknown with channelAgeGateRenderers, return false in this case
         if (channelAgeGateRenderer != null) return false
 
-        return isChannelVerified(channelHeader ?: throw ParsingException("Could not get verified status"))
+        if (channelHeader == null) throw ParsingException("Could not get channel verified status, no channel header has been extracted")
+        return isChannelVerified(channelHeader!!)
     }
 
     @Throws(ParsingException::class)

@@ -9,13 +9,14 @@ import ac.mdiq.vista.extractor.services.youtube.YoutubeChannelHelper.ChannelHead
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.defaultAlertsCheck
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getJsonPostResponse
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject
+import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.hasArtistOrVerifiedIconBadgeAttachment
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isVerified
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.prepareDesktopJsonBuilder
 import com.grack.nanojson.JsonObject
 import com.grack.nanojson.JsonWriter
 import java.io.IOException
+import java.io.Serializable
 import java.nio.charset.StandardCharsets
-import java.util.*
 
 
 /**
@@ -214,27 +215,11 @@ object YoutubeChannelHelper {
             HeaderType.CAROUSEL -> return true
             HeaderType.PAGE -> {
                 val pageHeaderViewModel = channelHeader.json.getObject(CONTENT).getObject(PAGE_HEADER_VIEW_MODEL)
-                val hasCircleOrMusicIcon = pageHeaderViewModel.getObject(TITLE)
-                    .getObject("dynamicTextViewModel")
-                    .getObject("text")
-                    .getArray("attachmentRuns")
-                    .stream()
-                    .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
-                    .map { obj: Any? -> JsonObject::class.java.cast(obj) }
-                    .anyMatch { attachmentRun: JsonObject ->
-                        attachmentRun.getObject("element")
-                            .getObject("type")
-                            .getObject("imageType")
-                            .getObject("image")
-                            .getArray("sources")
-                            .stream()
-                            .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
-                            .map { obj: Any? -> JsonObject::class.java.cast(obj) }
-                            .anyMatch { source: JsonObject ->
-                                val imageName = source.getObject("clientResource").getString("imageName")
-                                "CHECK_CIRCLE_FILLED" == imageName || "MUSIC_FILLED" == imageName
-                            }
-                    }
+                val hasCircleOrMusicIcon = hasArtistOrVerifiedIconBadgeAttachment(
+                    pageHeaderViewModel.getObject(TITLE)
+                        .getObject("dynamicTextViewModel")
+                        .getObject("text")
+                        .getArray("attachmentRuns"))
                 // If a pageHeaderRenderer has no object in which a check verified may be
                 // contained and if it has a contentPreviewImageViewModel, it should mean
                 // that the header is coming from a system channel, which we can assume to
@@ -261,16 +246,15 @@ object YoutubeChannelHelper {
      *
      * If the ID cannot still be get, the fallback channel ID, if provided, will be used.
      *
-     * @param header the channel header
+     * @param channelHeader the channel header
      * @param fallbackChannelId the fallback channel ID, which can be null
      * @return the ID of the channel
      * @throws ParsingException if the channel ID cannot be got from the channel header, the
      * channel response and the fallback channel ID
      */
     @Throws(ParsingException::class)
-    fun getChannelId(header: ChannelHeader?, jsonResponse: JsonObject,  fallbackChannelId: String?): String {
-        if (header != null) {
-            val channelHeader = header
+    fun getChannelId(channelHeader: ChannelHeader?, jsonResponse: JsonObject,  fallbackChannelId: String?): String {
+        if (channelHeader != null) {
             when (channelHeader.headerType) {
                 HeaderType.C4_TABBED -> {
                     val channelId = channelHeader.json.getObject(HEADER)
@@ -313,7 +297,7 @@ object YoutubeChannelHelper {
     }
 
     @Throws(ParsingException::class)
-    fun getChannelName(channelHeader: ChannelHeader?, jsonResponse: JsonObject,  channelAgeGateRenderer: JsonObject?): String {
+    fun getChannelName(channelHeader: ChannelHeader?, channelAgeGateRenderer: JsonObject?, jsonResponse: JsonObject): String {
         if (channelAgeGateRenderer != null) {
             val title = channelAgeGateRenderer.getString("channelTitle")
             if (title.isNullOrEmpty()) throw ParsingException("Could not get channel name")
@@ -400,7 +384,7 @@ object YoutubeChannelHelper {
              * The type of the channel header.
              * See the documentation of the [HeaderType] class for more details.
              */
-            @JvmField val headerType: HeaderType) {
+            @JvmField val headerType: HeaderType): Serializable {
         /**
          * Types of supported YouTube channel headers.
          */

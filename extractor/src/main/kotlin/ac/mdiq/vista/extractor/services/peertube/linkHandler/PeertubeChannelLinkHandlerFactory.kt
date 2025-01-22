@@ -10,7 +10,7 @@ import java.net.URL
 class PeertubeChannelLinkHandlerFactory private constructor() : ListLinkHandlerFactory() {
     @Throws(ParsingException::class, UnsupportedOperationException::class)
     override fun getId(url: String): String {
-        return fixId(matchGroup(ID_PATTERN, url, 0))
+        return fixId(matchGroup(ID_URL_PATTERN, url, 0))
     }
 
     @Throws(ParsingException::class, UnsupportedOperationException::class)
@@ -28,11 +28,8 @@ class PeertubeChannelLinkHandlerFactory private constructor() : ListLinkHandlerF
     override fun onAcceptUrl(url: String): Boolean {
         try {
             URL(url)
-            return (url.contains("/accounts/") || url.contains("/a/")
-                    || url.contains("/video-channels/") || url.contains("/c/"))
-        } catch (e: MalformedURLException) {
-            return false
-        }
+            return (url.contains("/accounts/") || url.contains("/a/") || url.contains("/video-channels/") || url.contains("/c/"))
+        } catch (e: MalformedURLException) { return false }
     }
 
     /**
@@ -49,18 +46,16 @@ class PeertubeChannelLinkHandlerFactory private constructor() : ListLinkHandlerF
      * @return the fixed id
      */
     private fun fixId(id: String): String {
-        if (id.startsWith("a/")) {
-            return "accounts" + id.substring(1)
-        } else if (id.startsWith("c/")) {
-            return "video-channels" + id.substring(1)
-        }
-        return id
+        val cleanedId = if (id.startsWith("/")) id.substring(1) else id
+        if (cleanedId.startsWith("a/")) return "accounts" + cleanedId.substring(1)
+        else if (cleanedId.startsWith("c/")) return "video-channels" + cleanedId.substring(1)
+        return cleanedId
     }
 
     companion object {
-        val instance
-                : PeertubeChannelLinkHandlerFactory = PeertubeChannelLinkHandlerFactory()
+        val instance: PeertubeChannelLinkHandlerFactory = PeertubeChannelLinkHandlerFactory()
         private const val ID_PATTERN = "((accounts|a)|(video-channels|c))/([^/?&#]*)"
+        private const val ID_URL_PATTERN: String = "/((accounts|a)|(video-channels|c))/([^/?&#]*)"
         const val API_ENDPOINT: String = "/api/v1/"
     }
 }

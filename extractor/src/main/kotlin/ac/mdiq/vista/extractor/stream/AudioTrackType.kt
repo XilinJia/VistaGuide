@@ -26,5 +26,15 @@ enum class AudioTrackType {
      * @see [
      * https://en.wikipedia.org/wiki/Audio_description](https://en.wikipedia.org/wiki/Audio_description)
      */
-    DESCRIPTIVE
+    DESCRIPTIVE,
+
+    /**
+     * A secondary audio track.
+     *
+     * <p>
+     * A secondary audio track can be an alternate audio track from the original language of a
+     * video or an alternate language.
+     * </p>
+     */
+    SECONDARY
 }

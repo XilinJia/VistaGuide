@@ -1,3 +1,4 @@
+## This project is for research and experimental purposes only.  Understand that you assume your own risk if using it.
 
 # VistaGuide
 
@@ -5,7 +6,7 @@ This is a migration of the original [NewPipe Extractor](https://github.com/TeamN
 
 org.schabi.newpipe has been refactored to ac.mdiq.vista.  And of course the package renamed to VistaGuide, the group name has been refactored (from com.github.TeamNewPipe) to com.github.XilinJia, extractor.NewPipe is refactored to extractor.Vista
 
-Up to date with version 0.24.2 of NewPipe Extractor
+Up to date with version 0.24.4 of NewPipe Extractor
 
 =================================
 ## Vista Guide

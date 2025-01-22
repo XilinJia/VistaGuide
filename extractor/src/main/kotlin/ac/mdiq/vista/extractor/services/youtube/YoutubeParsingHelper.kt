@@ -20,14 +20,11 @@
  */
 package ac.mdiq.vista.extractor.services.youtube
 
-import com.grack.nanojson.*
-import org.jsoup.nodes.Entities
 import ac.mdiq.vista.extractor.Image
 import ac.mdiq.vista.extractor.Image.ResolutionLevel.Companion.fromHeight
 import ac.mdiq.vista.extractor.Vista.downloader
 import ac.mdiq.vista.extractor.downloader.Response
 import ac.mdiq.vista.extractor.exceptions.*
-import ac.mdiq.vista.extractor.exceptions.ExtractionException
 import ac.mdiq.vista.extractor.localization.ContentCountry
 import ac.mdiq.vista.extractor.localization.Localization
 import ac.mdiq.vista.extractor.playlist.PlaylistInfo
@@ -36,6 +33,7 @@ import ac.mdiq.vista.extractor.stream.AudioTrackType
 import ac.mdiq.vista.extractor.utils.JsonUtils.toJsonObject
 import ac.mdiq.vista.extractor.utils.Parser.RegexException
 import ac.mdiq.vista.extractor.utils.Parser.isMatch
+import ac.mdiq.vista.extractor.utils.ProtoBuilder
 import ac.mdiq.vista.extractor.utils.RandomStringFromAlphabetGenerator.generate
 import ac.mdiq.vista.extractor.utils.Utils.HTTP
 import ac.mdiq.vista.extractor.utils.Utils.HTTPS
@@ -45,6 +43,8 @@ import ac.mdiq.vista.extractor.utils.Utils.getStringResultFromRegexArray
 import ac.mdiq.vista.extractor.utils.Utils.removeNonDigitCharacters
 import ac.mdiq.vista.extractor.utils.Utils.replaceHttpWithHttps
 import ac.mdiq.vista.extractor.utils.Utils.stringToURL
+import com.grack.nanojson.*
+import org.jsoup.nodes.Entities
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URL
@@ -57,6 +57,7 @@ import java.util.*
 import java.util.regex.Pattern
 import java.util.stream.Collectors
 import java.util.stream.Stream
+
 
 object YoutubeParsingHelper {
     /**
@@ -149,7 +150,7 @@ object YoutubeParsingHelper {
      * It can be extracted by getting the latest release version of the app on
      * [the App Store page of the YouTube app](https://apps.apple.com/us/app/youtube-watch-listen-stream/id544007664/), in the `What’s New` section.
      */
-    private const val IOS_YOUTUBE_CLIENT_VERSION = "19.28.1"
+    private const val IOS_YOUTUBE_CLIENT_VERSION = "19.45.4"
 
     /**
      * The InnerTube API key used by the `iOS` client. Found with the help of
@@ -201,29 +202,28 @@ object YoutubeParsingHelper {
     private const val IOS_DEVICE_MODEL: String = "iPhone16,2"
 
     /**
-     * Spoofing an iPhone 15 Pro Max running iOS 17.5.1 with the hardcoded version of the iOS app.
-     * To be used for the `"osVersion"` field in JSON POST requests.
-     *
-     *
+     * Spoofing an iPhone 15 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app.
+     * To be used for the {@code "osVersion"} field in JSON POST requests.
+     * <p>
      * The value of this field seems to use the following structure:
      * "iOS major version.minor version.patch version.build version", where
      * "patch version" is equal to 0 if it isn't set
      * The build version corresponding to the iOS version used can be found on
-     * [
- * https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15_Pro_Max](https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15_Pro_Max)
+     * <a href="https://theapplewiki.com/wiki/Firmware/iPhone/18.x#iPhone_15_Pro_Max">
+     *     https://theapplewiki.com/wiki/Firmware/iPhone/18.x#iPhone_15_Pro_Max</a>
+     * </p>
      *
-     *
-     * @see .IOS_USER_AGENT_VERSION
+     * @see #IOS_USER_AGENT_VERSION
      */
-    private const val IOS_OS_VERSION: String = "17.5.1.21F90"
+    private const val IOS_OS_VERSION: String = "18.1.0.22B83"
 
     /**
-     * Spoofing an iPhone 15 running iOS 17.5.1 with the hardcoded version of the iOS app. To be
+     * Spoofing an iPhone 15 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app. To be
      * used in the user agent for requests.
      *
-     * @see .IOS_OS_VERSION
+     * @see #IOS_OS_VERSION
      */
-    private const val IOS_USER_AGENT_VERSION: String = "17_5_1"
+    private const val IOS_USER_AGENT_VERSION: String = "18_1_0"
 
     private var numberGenerator = Random()
 
@@ -302,7 +302,7 @@ object YoutubeParsingHelper {
      * @return A singleton map containing the header.
      */
     val cookieHeader: Map<String, List<String>>
-        get() = java.util.Map.of("Cookie", listOf(generateConsentCookie()))
+        get() = mapOf("Cookie" to listOf(generateConsentCookie()))
 
     @get:Throws(IOException::class, ReCaptchaException::class)
     val isHardcodedYoutubeMusicClientVersionValid: Boolean
@@ -371,6 +371,23 @@ object YoutubeParsingHelper {
 
     fun isY2ubeURL(url: URL): Boolean {
         return url.host.equals("y2u.be", ignoreCase = true)
+    }
+
+    fun randomVisitorData(country: ContentCountry): String {
+        val pbE2 = ProtoBuilder()
+        pbE2.string(2, "")
+        pbE2.varint(4, (numberGenerator.nextInt(255) + 1).toLong())
+
+        val pbE = ProtoBuilder()
+        pbE.string(1, country.countryCode)
+        pbE.bytes(2, pbE2.toBytes())
+
+        val pb = ProtoBuilder()
+        pb.string(1, generate(
+            CONTENT_PLAYBACK_NONCE_ALPHABET, 11, numberGenerator))
+        pb.varint(5, System.currentTimeMillis() / 1000 - numberGenerator.nextInt(600000))
+        pb.bytes(6, pbE.toBytes())
+        return pb.toUrlencodedBase64()
     }
 
     /**
@@ -954,7 +971,7 @@ object YoutubeParsingHelper {
     @Throws(IOException::class, ExtractionException::class)
     private fun getMobilePostResponse(endpoint: String, body: ByteArray, localization: Localization, userAgent: String,
                                        endPartOfUrlRequest: String?): JsonObject {
-        val headers = java.util.Map.of("User-Agent", listOf(userAgent), "X-Goog-Api-Format-Version", listOf("2"))
+        val headers = mapOf("User-Agent" to listOf(userAgent), "X-Goog-Api-Format-Version" to listOf("2"))
 
         val baseEndpointUrl = ((YOUTUBEI_V1_GAPIS_URL + endpoint) + "?" + DISABLE_PRETTY_PRINT_PARAMETER)
 
@@ -971,8 +988,13 @@ object YoutubeParsingHelper {
     @Throws(IOException::class, ExtractionException::class)
     fun prepareDesktopJsonBuilder(localization: Localization, contentCountry: ContentCountry, visitorData: String?): JsonBuilder<JsonObject> {
         // @formatter:off
-         val builder = JsonObject.builder()
-        .`object`("context")
+        var vData = visitorData
+        if (vData == null) vData = randomVisitorData(contentCountry)
+
+        // @formatter:off
+        return JsonObject.builder()
+
+            .`object`("context")
         .`object`("client")
         .value("hl", localization.localizationCode)
         .value("gl", contentCountry.countryCode)
@@ -980,11 +1002,9 @@ object YoutubeParsingHelper {
         .value("clientVersion", getClientVersion())
         .value("originalUrl", "https://www.youtube.com")
         .value("platform", "DESKTOP")
-        .value("utcOffsetMinutes", 0)
-
-        if (visitorData != null) builder.value("visitorData", visitorData)
-
-        return builder.end()
+            .value("utcOffsetMinutes", 0)
+            .value("visitorData", vData)
+            .end()
         .`object`("request")
         .array("internalExperimentFlags")
         .end()
@@ -1054,7 +1074,8 @@ object YoutubeParsingHelper {
                         https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15
                          */
         .value("osVersion", IOS_OS_VERSION)
-        .value("hl", localization.localizationCode)
+            .value("visitorData", randomVisitorData(contentCountry))
+            .value("hl", localization.localizationCode)
         .value("gl", contentCountry.countryCode)
         .value("utcOffsetMinutes", 0)
         .end()
@@ -1156,9 +1177,13 @@ object YoutubeParsingHelper {
      * [Localization] provided
      */
     fun getIosUserAgent(localization: Localization?): String {
-        // Spoofing an iPhone 15 running iOS 17.1.2 with the hardcoded version of the iOS app
-        return ((("com.google.ios.youtube/$IOS_YOUTUBE_CLIENT_VERSION").toString() + "(" + IOS_DEVICE_MODEL)
-                + (localization ?: Localization.DEFAULT).getCountryCode() + ")")
+
+        // Spoofing an iPhone 15 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app
+        return ("com.google.ios.youtube/" + IOS_YOUTUBE_CLIENT_VERSION
+                + "(" + IOS_DEVICE_MODEL + "; U; CPU iOS "
+                + IOS_USER_AGENT_VERSION + " like Mac OS X; "
+                + (localization ?: Localization.DEFAULT).getCountryCode()
+                + ")")
     }
 
     /**
@@ -1169,7 +1194,7 @@ object YoutubeParsingHelper {
      */
     private fun getOriginReferrerHeaders(url: String): Map<String, List<String>> {
         val urlList = listOf(url)
-        return java.util.Map.of("Origin", urlList, "Referer", urlList)
+        return mapOf("Origin" to urlList, "Referer" to urlList)
     }
 
     /**
@@ -1180,7 +1205,7 @@ object YoutubeParsingHelper {
      * @param version X-YouTube-Client-Version value.
      */
     private fun getClientHeaders(name: String, version: String): Map<String, List<String>> {
-        return java.util.Map.of("X-YouTube-Client-Name", listOf(name), "X-YouTube-Client-Version", listOf(version))
+        return mapOf("X-YouTube-Client-Name" to listOf(name), "X-YouTube-Client-Version" to listOf(version))
     }
 
     // CAISAiAD means that the user configured manually cookies YouTube, regardless of
@@ -1275,6 +1300,26 @@ object YoutubeParsingHelper {
         return false
     }
 
+    fun hasArtistOrVerifiedIconBadgeAttachment(attachmentRuns: JsonArray): Boolean {
+        return attachmentRuns.stream()
+            .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
+            .map<JsonObject?> { obj: Any? -> JsonObject::class.java.cast(obj) }
+            .anyMatch { attachmentRun: JsonObject? ->
+                attachmentRun!!.getObject("element")
+                    .getObject("type")
+                    .getObject("imageType")
+                    .getObject("image")
+                    .getArray("sources")
+                    .stream()
+                    .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
+                    .map<JsonObject?> { obj: Any? -> JsonObject::class.java.cast(obj) }
+                    .anyMatch { source: JsonObject? ->
+                        val imageName = source!!.getObject("clientResource").getString("imageName")
+                        "CHECK_CIRCLE_FILLED" == imageName || "AUDIO_BADGE" == imageName || "MUSIC_FILLED" == imageName
+                    }
+            }
+    }
+
     /**
      * Generate a content playback nonce (also called `cpn`), sent by YouTube clients in
      * playback requests (and also for some clients, in the player request body).
@@ -1363,8 +1408,9 @@ object YoutubeParsingHelper {
 
         return when (atype) {
             "original" -> AudioTrackType.ORIGINAL
-            "dubbed" -> AudioTrackType.DUBBED
+            "dubbed", "dubbed-auto" -> AudioTrackType.DUBBED
             "descriptive" -> AudioTrackType.DESCRIPTIVE
+            "secondary" -> AudioTrackType.SECONDARY
             else -> null
         }
     }

@@ -181,7 +181,18 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
                 item.has("backgroundPromoRenderer") -> throw NothingFoundException(getTextFromObject(item.getObject("backgroundPromoRenderer").getObject("bodyText")))
                 extractVideoResults && item.has("videoRenderer") -> collector.commit(YoutubeStreamInfoItemExtractor(item.getObject("videoRenderer"), timeAgoParser))
                 extractChannelResults && item.has("channelRenderer") -> collector.commit(YoutubeChannelInfoItemExtractor(item.getObject("channelRenderer")))
-                extractPlaylistResults && item.has("playlistRenderer") -> collector.commit(YoutubePlaylistInfoItemExtractor(item.getObject("playlistRenderer")))
+                extractPlaylistResults -> {
+                    when {
+                        item.has("playlistRenderer") -> collector.commit(YoutubePlaylistInfoItemExtractor(item.getObject("playlistRenderer")))
+                        item.has("showRenderer") -> collector.commit(YoutubeShowRendererInfoItemExtractor(item.getObject("showRenderer")))
+                        item.has("lockupViewModel") -> {
+                            val lockupViewModel = item.getObject("lockupViewModel")
+                            if ("LOCKUP_CONTENT_TYPE_PLAYLIST" == lockupViewModel.getString("contentType"))
+                                collector.commit(YoutubeMixOrPlaylistLockupInfoItemExtractor(lockupViewModel))
+                        }
+                    }
+                }
+
             }
 //            println("YoutubeSearchExtractor collectStreamsFrom collector: ${collector.getItems().size}")
         }

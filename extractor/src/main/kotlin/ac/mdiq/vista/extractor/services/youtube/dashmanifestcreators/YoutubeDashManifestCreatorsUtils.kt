@@ -13,7 +13,6 @@ import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isAndroidSt
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isIosStreamingUrl
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isTvHtml5SimplyEmbeddedPlayerStreamingUrl
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isWebStreamingUrl
-import ac.mdiq.vista.extractor.services.youtube.dashmanifestcreators.CreationException
 import ac.mdiq.vista.extractor.services.youtube.dashmanifestcreators.CreationException.Companion.couldNotAddElement
 import ac.mdiq.vista.extractor.stream.AudioTrackType
 import ac.mdiq.vista.extractor.utils.ManifestCreatorCache
@@ -24,7 +23,6 @@ import java.io.IOException
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets
 import java.util.*
-
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.parsers.ParserConfigurationException
@@ -155,10 +153,8 @@ object YoutubeDashManifestCreatorsUtils {
     fun generateDocumentAndMpdElement(duration: Long): Document {
         try {
             val doc = newDocument()
-
             val mpdElement = doc.createElement(MPD)
             doc.appendChild(mpdElement)
-
             setAttribute(mpdElement, doc, "xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
             setAttribute(mpdElement, doc, "xmlns", "urn:mpeg:DASH:schema:MPD:2011")
             setAttribute(mpdElement, doc, "xsi:schemaLocation", "urn:mpeg:DASH:schema:MPD:2011 DASH-MPD.xsd")
@@ -166,11 +162,8 @@ object YoutubeDashManifestCreatorsUtils {
             setAttribute(mpdElement, doc, "profiles", "urn:mpeg:dash:profile:full:2011")
             setAttribute(mpdElement, doc, "type", "static")
             setAttribute(mpdElement, doc, "mediaPresentationDuration", String.format(Locale.ENGLISH, "PT%.3fS", duration / 1000.0))
-
             return doc
-        } catch (e: Exception) {
-            throw CreationException("Could not generate the DASH manifest or append the MPD doc to it", e)
-        }
+        } catch (e: Exception) { throw CreationException("Could not generate the DASH manifest or append the MPD doc to it", e) }
     }
 
     /**
@@ -187,9 +180,7 @@ object YoutubeDashManifestCreatorsUtils {
             val mpdElement = doc.getElementsByTagName(MPD).item(0) as Element
             val periodElement = doc.createElement(PERIOD)
             mpdElement.appendChild(periodElement)
-        } catch (e: DOMException) {
-            throw couldNotAddElement(PERIOD, e)
-        }
+        } catch (e: DOMException) { throw couldNotAddElement(PERIOD, e) }
     }
 
     /**
@@ -211,9 +202,7 @@ object YoutubeDashManifestCreatorsUtils {
             setAttribute(adaptationSetElement, doc, "id", "0")
 
             val mediaFormat = itagItem.mediaFormat
-            if (mediaFormat == null || mediaFormat.mimeType.isEmpty()) {
-                throw couldNotAddElement(ADAPTATION_SET, "the MediaFormat or its mime type is null or empty")
-            }
+            if (mediaFormat.mimeType.isEmpty()) throw couldNotAddElement(ADAPTATION_SET, "the MediaFormat or its mime type is null or empty")
 
             if (itagItem.itagType == ItagItem.ItagType.AUDIO) {
                 val audioLocale = itagItem.audioLocale
@@ -257,9 +246,7 @@ object YoutubeDashManifestCreatorsUtils {
             setAttribute(roleElement, doc, "value", getRoleValue(itagItem.audioTrackType))
 
             adaptationSetElement.appendChild(roleElement)
-        } catch (e: DOMException) {
-            throw couldNotAddElement(ROLE, e)
-        }
+        } catch (e: DOMException) { throw couldNotAddElement(ROLE, e) }
     }
 
     /**
@@ -274,6 +261,9 @@ object YoutubeDashManifestCreatorsUtils {
                 AudioTrackType.ORIGINAL -> "main"
                 AudioTrackType.DUBBED -> "dub"
                 AudioTrackType.DESCRIPTIVE -> "description"
+                // Secondary track types do not seem to have a dedicated role in the DASH
+                // specification, so use alternate for them
+                else -> "alternate"
             }
         }
         return "main"
@@ -328,9 +318,7 @@ object YoutubeDashManifestCreatorsUtils {
                 audioSamplingRateAttribute.value = itagItem.getSampleRate().toString()
             }
             adaptationSetElement.appendChild(representationElement)
-        } catch (e: DOMException) {
-            throw couldNotAddElement(REPRESENTATION, e)
-        }
+        } catch (e: DOMException) { throw couldNotAddElement(REPRESENTATION, e) }
     }
 
     /**
@@ -365,9 +353,7 @@ object YoutubeDashManifestCreatorsUtils {
             setAttribute(audioChannelConfigurationElement, doc, "value", itagItem.getAudioChannels().toString())
 
             representationElement.appendChild(audioChannelConfigurationElement)
-        } catch (e: DOMException) {
-            throw couldNotAddElement(AUDIO_CHANNEL_CONFIGURATION, e)
-        }
+        } catch (e: DOMException) { throw couldNotAddElement(AUDIO_CHANNEL_CONFIGURATION, e) }
     }
 
     /**
@@ -386,9 +372,7 @@ object YoutubeDashManifestCreatorsUtils {
             val documentXml = documentToXml(doc)
             manifestCreatorCache.put(originalBaseStreamingUrl, documentXml)
             return documentXml
-        } catch (e: Exception) {
-            throw CreationException("Could not convert the DASH manifest generated to a string", e)
-        }
+        } catch (e: Exception) { throw CreationException("Could not convert the DASH manifest generated to a string", e) }
     }
 
     /**
@@ -438,9 +422,7 @@ object YoutubeDashManifestCreatorsUtils {
             setAttribute(segmentTemplateElement, doc, "media", "$baseUrl&sq=\$Number$")
 
             representationElement.appendChild(segmentTemplateElement)
-        } catch (e: DOMException) {
-            throw couldNotAddElement(SEGMENT_TEMPLATE, e)
-        }
+        } catch (e: DOMException) { throw couldNotAddElement(SEGMENT_TEMPLATE, e) }
     }
 
     /**
@@ -461,9 +443,7 @@ object YoutubeDashManifestCreatorsUtils {
             val segmentTimelineElement = doc.createElement(SEGMENT_TIMELINE)
 
             segmentTemplateElement.appendChild(segmentTimelineElement)
-        } catch (e: DOMException) {
-            throw couldNotAddElement(SEGMENT_TIMELINE, e)
-        }
+        } catch (e: DOMException) { throw couldNotAddElement(SEGMENT_TIMELINE, e) }
     }
 
     /**
@@ -503,20 +483,13 @@ object YoutubeDashManifestCreatorsUtils {
                 val headers = mapOf("User-Agent" to listOf(if (isAndroidStreamingUrl) getAndroidUserAgent(null) else getIosUserAgent(null)))
                 val emptyBody = "".toByteArray(StandardCharsets.UTF_8)
                 return downloader.post(baseStreamingUrl, headers, emptyBody)
-            } catch (e: IOException) {
-                throw CreationException("Could not get the ${if (isIosStreamingUrl) "ANDROID" else "IOS"} streaming URL response", e)
-            } catch (e: ExtractionException) {
-                throw CreationException("Could not get the ${if (isIosStreamingUrl) "ANDROID" else "IOS"} streaming URL response", e)
-            }
+            } catch (e: IOException) { throw CreationException("Could not get the ${if (isIosStreamingUrl) "ANDROID" else "IOS"} streaming URL response", e)
+            } catch (e: ExtractionException) { throw CreationException("Could not get the ${if (isIosStreamingUrl) "ANDROID" else "IOS"} streaming URL response", e) }
         }
 
-        try {
-            return downloader.get(baseStreamingUrl)
-        } catch (e: IOException) {
-            throw CreationException("Could not get the streaming URL response", e)
-        } catch (e: ExtractionException) {
-            throw CreationException("Could not get the streaming URL response", e)
-        }
+        try { return downloader.get(baseStreamingUrl)
+        } catch (e: IOException) { throw CreationException("Could not get the streaming URL response", e)
+        } catch (e: ExtractionException) { throw CreationException("Could not get the streaming URL response", e) }
     }
 
     /**
@@ -642,10 +615,7 @@ object YoutubeDashManifestCreatorsUtils {
             // This should never be reached, but is required because we don't want to return null
             // here
             throw CreationException("Could not get the streaming URL response of a HTML5 client: unreachable code reached!")
-        } catch (e: IOException) {
-            throw CreationException("Could not get the streaming URL response of a HTML5 client", e)
-        } catch (e: ExtractionException) {
-            throw CreationException("Could not get the streaming URL response of a HTML5 client", e)
-        }
+        } catch (e: IOException) { throw CreationException("Could not get the streaming URL response of a HTML5 client", e)
+        } catch (e: ExtractionException) { throw CreationException("Could not get the streaming URL response of a HTML5 client", e) }
     }
 }

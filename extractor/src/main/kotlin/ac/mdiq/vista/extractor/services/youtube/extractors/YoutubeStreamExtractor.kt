@@ -77,6 +77,7 @@ import java.util.function.Function
 import java.util.stream.Collectors
 
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler) : StreamExtractor(service, linkHandler) {
     private var playerResponse: JsonObject? = null
@@ -277,7 +278,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             if (adaptiveFormats.isEmpty()) continue
 
             val durationMs: String = adaptiveFormats.getObject(0).getString("approxDurationMs")
-            try { return Math.round(durationMs.toLong() / 1000f) } catch (ignored: NumberFormatException) { }
+            try { return (durationMs.toLong() / 1000f).roundToInt() } catch (ignored: NumberFormatException) { }
         }
 
         throw ParsingException("Could not get duration")
@@ -487,22 +488,23 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                         .getArray("results")
 
                     val timeAgoParser: TimeAgoParser = timeAgoParser
-                    results.stream()
-                        .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
-                        .map { obj: Any? -> JsonObject::class.java.cast(obj) }
-                        .map { result: JsonObject ->
+                    results.asSequence()
+                        .filterIsInstance<JsonObject>()
+                        .mapNotNull { result: JsonObject ->
                             when {
-                                result.has("compactVideoRenderer") ->
-                                    return@map YoutubeStreamInfoItemExtractor(result.getObject("compactVideoRenderer"), timeAgoParser)
-                                result.has("compactRadioRenderer") ->
-                                    return@map YoutubeMixOrPlaylistInfoItemExtractor(result.getObject("compactRadioRenderer"))
-                                result.has("compactPlaylistRenderer") ->
-                                    return@map YoutubeMixOrPlaylistInfoItemExtractor(result.getObject("compactPlaylistRenderer"))
+                                result.has("compactVideoRenderer") -> YoutubeStreamInfoItemExtractor(result.getObject("compactVideoRenderer"), timeAgoParser)
+                                result.has("compactRadioRenderer") -> YoutubeMixOrPlaylistInfoItemExtractor(result.getObject("compactRadioRenderer"))
+                                result.has("compactPlaylistRenderer") -> YoutubeMixOrPlaylistInfoItemExtractor(result.getObject("compactPlaylistRenderer"))
+                                result.has("lockupViewModel") -> {
+                                    val lockupViewModel = result.getObject("lockupViewModel")
+                                    if ("LOCKUP_CONTENT_TYPE_PLAYLIST" == lockupViewModel.getString("contentType"))
+                                        YoutubeMixOrPlaylistLockupInfoItemExtractor(lockupViewModel)
+                                    else null
+                                }
                                 else -> null
                             }
                         }
-                        .filter { obj: InfoItemExtractor? -> Objects.nonNull(obj) }
-                        .forEach { extractor: InfoItemExtractor? -> if (extractor != null) collector.commit(extractor) }
+                        .forEach { extractor: InfoItemExtractor -> collector.commit(extractor) }
                 }
                 return collector
             } catch (e: Exception) { throw ParsingException("Could not get related videos", e) }
@@ -699,7 +701,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         tvHtml5SimplyEmbedCpn = generateContentPlaybackNonce()
 
         val tvHtml5EmbedPlayerResponse: JsonObject = getJsonPostResponse(PLAYER,
-            createTvHtml5EmbedPlayerBody(localization, contentCountry, videoId, getSignatureTimestamp(videoId)!!, tvHtml5SimplyEmbedCpn!!), localization)
+            createTvHtml5EmbedPlayerBody(localization, contentCountry, videoId, getSignatureTimestamp(videoId), tvHtml5SimplyEmbedCpn!!), localization)
 
         if (isPlayerResponseNotValid(tvHtml5EmbedPlayerResponse, videoId)) throw ExtractionException("TVHTML5 embed player response is not valid")
 
@@ -911,7 +913,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         // Exceptions thrown by
         // YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated are so
         // propagated to the parent which ignores streams in this case
-        streamUrl = getUrlWithThrottlingParameterDeobfuscated(videoId, streamUrl!!)
+        streamUrl = getUrlWithThrottlingParameterDeobfuscated(videoId, streamUrl)
 
         val initRange: JsonObject = formatData.getObject("initRange")
         val indexRange: JsonObject = formatData.getObject("indexRange")
@@ -974,6 +976,19 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         return itagInfo
     }
 
+    /**
+     * {@inheritDoc}
+     * Should return a list of Frameset object that contains preview of stream frames
+     *
+     * <p><b>Warning:</b> When using this method be aware
+     * that the YouTube API very rarely returns framesets,
+     * that are slightly too small e.g. framesPerPageX = 5, frameWidth = 160, but the url contains
+     * a storyboard that is only 795 pixels wide (5*160 &gt; 795). You will need to handle this
+     * "manually" to avoid errors.</p>
+     *
+     * @see <a href="https://github.com/TeamNewPipe/NewPipe/pull/11596">
+     *     TeamNewPipe/NewPipe#11596</a>
+     */
     @get:Throws(ExtractionException::class)
     override val frames: List<Frameset>
         get() {
