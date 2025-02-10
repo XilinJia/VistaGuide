@@ -26,9 +26,22 @@ internal object YoutubeThrottlingParameterUtils {
     private val DEOBFUSCATION_FUNCTION_NAME_REGEXES: Array<Pattern> = arrayOf(
 
         /*
-        * The first regex matches the following text, where we want Wma and the array index accessed:
-        * a.D&&(b="nn"[+a.D],WL(a),c=a.j[b]||null)&&(c=SDa[0](c),a.set(b,c),SDa.length||Wma("")
-        */
+         * Matches the following text, where we want SDa and the array index accessed:
+         *
+         * a.D&&(b="nn"[+a.D],WL(a),c=a.j[b]||null)&&(c=SDa[0](c),a.set(b,c),SDa.length||Wma("")
+         */
+        Pattern.compile(SINGLE_CHAR_VARIABLE_REGEX + "=\"nn\"\\[\\+" + MULTIPLE_CHARS_REGEX
+                + "\\." + MULTIPLE_CHARS_REGEX + "]," + MULTIPLE_CHARS_REGEX + "\\("
+                + MULTIPLE_CHARS_REGEX + "\\)," + MULTIPLE_CHARS_REGEX + "="
+                + MULTIPLE_CHARS_REGEX + "\\." + MULTIPLE_CHARS_REGEX + "\\["
+                + MULTIPLE_CHARS_REGEX + "]\\|\\|null\\)&&\\(" + MULTIPLE_CHARS_REGEX + "=("
+                + MULTIPLE_CHARS_REGEX + ")" + ARRAY_ACCESS_REGEX),
+
+        /*
+         * Matches the following text, where we want Wma:
+         *
+         * a.D&&(b="nn"[+a.D],WL(a),c=a.j[b]||null)&&(c=SDa[0](c),a.set(b,c),SDa.length||Wma("")
+         */
         Pattern.compile(SINGLE_CHAR_VARIABLE_REGEX + "=\"nn\"\\[\\+" + MULTIPLE_CHARS_REGEX
                 + "\\." + MULTIPLE_CHARS_REGEX + "]," + MULTIPLE_CHARS_REGEX + "\\("
                 + MULTIPLE_CHARS_REGEX + "\\)," + MULTIPLE_CHARS_REGEX + "="
@@ -40,12 +53,14 @@ internal object YoutubeThrottlingParameterUtils {
          * The second regex matches the following text, where we want SDa and the array index accessed:
          * a.D&&(b="nn"[+a.D],WL(a),c=a.j[b]||null)&&(c=SDa[0](c),a.set(b,c),SDa.length||Wma("")
          */
-        Pattern.compile(SINGLE_CHAR_VARIABLE_REGEX + "=\"nn\"\\[\\+" + MULTIPLE_CHARS_REGEX
-                + "\\." + MULTIPLE_CHARS_REGEX + "]," + MULTIPLE_CHARS_REGEX + "\\("
+        Pattern.compile("," + MULTIPLE_CHARS_REGEX + "\\("
                 + MULTIPLE_CHARS_REGEX + "\\)," + MULTIPLE_CHARS_REGEX + "="
                 + MULTIPLE_CHARS_REGEX + "\\." + MULTIPLE_CHARS_REGEX + "\\["
-                + MULTIPLE_CHARS_REGEX + "]\\|\\|null\\)&&\\(" + MULTIPLE_CHARS_REGEX + "=("
-                + MULTIPLE_CHARS_REGEX + ")" + ARRAY_ACCESS_REGEX),
+                + MULTIPLE_CHARS_REGEX + "]\\|\\|null\\)&&\\(\\b" + MULTIPLE_CHARS_REGEX + "=("
+                + MULTIPLE_CHARS_REGEX + ")" + ARRAY_ACCESS_REGEX + "\\("
+                + SINGLE_CHAR_VARIABLE_REGEX + "\\)," + MULTIPLE_CHARS_REGEX
+                + "\\.set\\((?:\"n+\"|" + MULTIPLE_CHARS_REGEX + ")," + MULTIPLE_CHARS_REGEX
+                + "\\)"),
 
         /*
          * The third regex matches the following text, where we want rma:
@@ -94,6 +109,11 @@ internal object YoutubeThrottlingParameterUtils {
 
     private const val FUNCTION_NAMES_IN_DEOBFUSCATION_ARRAY_REGEX = "\\s*=\\s*\\[(.+?)][;,]"
 
+    private const val FUNCTION_ARGUMENTS_REGEX: String = "=\\s*function\\s*\\(\\s*([^)]*)\\s*\\)"
+
+    private const val EARLY_RETURN_REGEX: String = (";\\s*if\\s*\\(\\s*typeof\\s+" + MULTIPLE_CHARS_REGEX
+            + "+\\s*===?\\s*([\"'])undefined\\1\\s*\\)\\s*return\\s+")
+
     /**
      * Get the throttling parameter deobfuscation function name of YouTube's base JavaScript file.
      *
@@ -134,7 +154,9 @@ internal object YoutubeThrottlingParameterUtils {
 
     @Throws(ParsingException::class)
     fun getDeobfuscationFunction(javaScriptPlayerCode: String, functionName: String): String {
-        return try { parseFunctionWithLexer(javaScriptPlayerCode, functionName) } catch (e: Exception) { parseFunctionWithRegex(javaScriptPlayerCode, functionName) }
+        val function = try { parseFunctionWithLexer(javaScriptPlayerCode, functionName)
+        } catch (e: Exception) { parseFunctionWithRegex(javaScriptPlayerCode, functionName) }
+        return fixupFunction(function)
     }
 
     /**
@@ -170,4 +192,37 @@ internal object YoutubeThrottlingParameterUtils {
         compileOrThrow(function)
         return function
     }
+
+
+    /**
+     * Removes an early return statement from the code of the throttling parameter deobfuscation
+     * function.
+     *
+     *
+     * In newer version of the player code the function contains a check for something defined
+     * outside of the function. If that was not found it will return early.
+     *
+     *
+     * The check can look like this (JS):<br></br>
+     * if(typeof RUQ==="undefined")return p;
+     *
+     *
+     * In this example RUQ will always be undefined when running the function as standalone.
+     * If the check is kept it would just return p which is the input parameter and would be wrong.
+     * For that reason this check and return statement needs to be removed.
+     *
+     * @param function the original throttling parameter deobfuscation function code
+     * @return the throttling parameter deobfuscation function code with the early return statement
+     * removed
+     */
+    @Throws(RegexException::class)
+    private fun fixupFunction(function: String): String {
+        val firstArgName: String? = matchGroup1(FUNCTION_ARGUMENTS_REGEX, function).split(",")[0].trim()
+        val earlyReturnPattern = Pattern.compile(
+            EARLY_RETURN_REGEX + firstArgName + ";",
+            Pattern.DOTALL)
+        val earlyReturnCodeMatcher = earlyReturnPattern.matcher(function)
+        return earlyReturnCodeMatcher.replaceFirst(";")
+    }
+
 }

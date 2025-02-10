@@ -29,6 +29,18 @@ import ac.mdiq.vista.extractor.localization.ContentCountry
 import ac.mdiq.vista.extractor.localization.Localization
 import ac.mdiq.vista.extractor.playlist.PlaylistInfo
 import ac.mdiq.vista.extractor.playlist.PlaylistInfo.PlaylistType
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.ANDROID_CLIENT_VERSION
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.DESKTOP_CLIENT_PLATFORM
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.IOS_CLIENT_VERSION
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.IOS_DEVICE_MODEL
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.IOS_USER_AGENT_VERSION
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_USER_AGENT
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_CLIENT_ID
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_CLIENT_NAME
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_HARDCODED_CLIENT_VERSION
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_REMIX_CLIENT_ID
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_REMIX_CLIENT_NAME
+import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_REMIX_HARDCODED_CLIENT_VERSION
 import ac.mdiq.vista.extractor.stream.AudioTrackType
 import ac.mdiq.vista.extractor.utils.JsonUtils.toJsonObject
 import ac.mdiq.vista.extractor.utils.Parser.RegexException
@@ -112,66 +124,7 @@ object YoutubeParsingHelper {
      */
     const val RACY_CHECK_OK: String = "racyCheckOk"
 
-    /**
-     * The hardcoded client ID used for InnerTube requests with the `WEB` client.
-     */
-    private const val WEB_CLIENT_ID: String = "1"
 
-    /**
-     * The client version for InnerTube requests with the `WEB` client, used as the last
-     * fallback if the extraction of the real one failed.
-     */
-    private const val HARDCODED_CLIENT_VERSION: String = "2.20240718.01.00"
-
-    /**
-     * The InnerTube API key which should be used by YouTube's desktop website, used as a fallback
-     * if the extraction of the real one failed.
-     */
-//    private const val HARDCODED_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
-
-    /**
-     * The hardcoded client version of the Android app used for InnerTube requests with this client.
-     *
-     * It can be extracted by getting the latest release version of the app in an APK repository
-     * such as [APKMirror](https://www.apkmirror.com/apk/google-inc/youtube/).
-     *
-     */
-    private const val ANDROID_YOUTUBE_CLIENT_VERSION = "19.28.35"
-
-    /**
-     * The InnerTube API key used by the `ANDROID` client. Found with the help of
-     * reverse-engineering app network requests.
-     */
-//    private const val ANDROID_YOUTUBE_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
-
-    /**
-     * The hardcoded client version of the iOS app used for InnerTube requests with this client.
-     *
-     * It can be extracted by getting the latest release version of the app on
-     * [the App Store page of the YouTube app](https://apps.apple.com/us/app/youtube-watch-listen-stream/id544007664/), in the `What’s New` section.
-     */
-    private const val IOS_YOUTUBE_CLIENT_VERSION = "19.45.4"
-
-    /**
-     * The InnerTube API key used by the `iOS` client. Found with the help of
-     * reverse-engineering app network requests.
-     */
-//    private const val IOS_YOUTUBE_KEY = "AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc"
-
-    /**
-     * The hardcoded client version used for InnerTube requests with the TV HTML5 embed client.
-     */
-    private const val TVHTML5_SIMPLY_EMBED_CLIENT_VERSION = "2.0"
-
-    /**
-     * The hardcoded client ID used for InnerTube requests with the YouTube Music desktop client.
-     */
-    private const val YOUTUBE_MUSIC_CLIENT_ID: String = "67"
-
-    /**
-     * The hardcoded client version used for InnerTube requests with the YouTube Music desktop client.
-     */
-    private const val HARDCODED_YOUTUBE_MUSIC_CLIENT_VERSION: String = "1.20240715.01.00"
 
     private var clientVersion: String? = null
     private var key: String? = null
@@ -193,44 +146,13 @@ object YoutubeParsingHelper {
     private const val CONTENT_PLAYBACK_NONCE_ALPHABET =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
-    /**
-     * The device machine id for the iPhone 15, used to get 60fps with the `iOS` client.
-     * See [this GitHub Gist](https://gist.github.com/adamawolf/3048717) for more
-     * information.
-     *
-     */
-    private const val IOS_DEVICE_MODEL: String = "iPhone16,2"
-
-    /**
-     * Spoofing an iPhone 15 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app.
-     * To be used for the {@code "osVersion"} field in JSON POST requests.
-     * <p>
-     * The value of this field seems to use the following structure:
-     * "iOS major version.minor version.patch version.build version", where
-     * "patch version" is equal to 0 if it isn't set
-     * The build version corresponding to the iOS version used can be found on
-     * <a href="https://theapplewiki.com/wiki/Firmware/iPhone/18.x#iPhone_15_Pro_Max">
-     *     https://theapplewiki.com/wiki/Firmware/iPhone/18.x#iPhone_15_Pro_Max</a>
-     * </p>
-     *
-     * @see #IOS_USER_AGENT_VERSION
-     */
-    private const val IOS_OS_VERSION: String = "18.1.0.22B83"
-
-    /**
-     * Spoofing an iPhone 15 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app. To be
-     * used in the user agent for requests.
-     *
-     * @see #IOS_OS_VERSION
-     */
-    private const val IOS_USER_AGENT_VERSION: String = "18_1_0"
-
     private var numberGenerator = Random()
 
     private const val FEED_BASE_CHANNEL_ID = "https://www.youtube.com/feeds/videos.xml?channel_id="
     private const val FEED_BASE_USER = "https://www.youtube.com/feeds/videos.xml?user="
     private val C_WEB_PATTERN: Pattern = Pattern.compile("&c=WEB")
-    private val C_TVHTML5_SIMPLY_EMBEDDED_PLAYER_PATTERN: Pattern = Pattern.compile("&c=TVHTML5_SIMPLY_EMBEDDED_PLAYER")
+    private val C_WEB_EMBEDDED_PLAYER_PATTERN: Pattern = Pattern.compile("&c=WEB_EMBEDDED_PLAYER")
+    private val C_TVHTML5_PLAYER_PATTERN: Pattern = Pattern.compile("&c=TVHTML5")
     private val C_ANDROID_PATTERN: Pattern = Pattern.compile("&c=ANDROID")
     private val C_IOS_PATTERN: Pattern = Pattern.compile("&c=IOS")
 
@@ -269,7 +191,7 @@ object YoutubeParsingHelper {
     val youtubeMusicHeaders: Map<String, List<String>>
         get() {
             val headers = HashMap(getOriginReferrerHeaders(YOUTUBE_MUSIC_URL))
-            headers.putAll(getClientHeaders(YOUTUBE_MUSIC_CLIENT_ID, youtubeMusicClientVersion?:""))
+            headers.putAll(getClientHeaders(WEB_REMIX_CLIENT_ID, youtubeMusicClientVersion!!))
             return headers
         }
 
@@ -293,7 +215,7 @@ object YoutubeParsingHelper {
     val clientInfoHeaders: MutableMap<String, List<String>>
         get() {
             val headers = HashMap(getOriginReferrerHeaders("https://www.youtube.com"))
-            headers.putAll(getClientHeaders(WEB_CLIENT_ID, getClientVersion()?:""))
+            headers.putAll(getClientHeaders(WEB_CLIENT_ID, getClientVersion()))
             return headers
         }
 
@@ -314,11 +236,11 @@ object YoutubeParsingHelper {
                 .`object`()
                 .`object`("context")
                 .`object`("client")
-                .value("clientName", "WEB_REMIX")
-                .value("clientVersion", HARDCODED_YOUTUBE_MUSIC_CLIENT_VERSION)
+                .value("clientName", WEB_REMIX_CLIENT_NAME)
+                .value("clientVersion", WEB_REMIX_HARDCODED_CLIENT_VERSION)
                 .value("hl", "en-GB")
                 .value("gl", "GB")
-                .value("platform", "DESKTOP")
+                .value("platform", DESKTOP_CLIENT_PLATFORM)
                 .value("utcOffsetMinutes", 0)
                 .end()
                 .`object`("request")
@@ -336,7 +258,7 @@ object YoutubeParsingHelper {
 
             // @formatter:on
             val headers = HashMap(getOriginReferrerHeaders(YOUTUBE_MUSIC_URL))
-            headers.putAll(getClientHeaders(YOUTUBE_MUSIC_CLIENT_ID, HARDCODED_YOUTUBE_MUSIC_CLIENT_VERSION))
+            headers.putAll(getClientHeaders(WEB_REMIX_CLIENT_ID, WEB_HARDCODED_CLIENT_VERSION))
 
             val response = downloader.postWithContentTypeJson(url, headers, json)
             // Ensure to have a valid response
@@ -580,31 +502,31 @@ object YoutubeParsingHelper {
     fun isHardcodedClientVersionValid(): Boolean {
         if (hardcodedClientVersionValid != null) return hardcodedClientVersionValid!!
         // @formatter:off
-         val body = JsonWriter.string()
-        .`object`()
-        .`object`("context")
-        .`object`("client")
-        .value("hl", "en-GB")
-        .value("gl", "GB")
-        .value("clientName", "WEB")
-        .value("clientVersion", HARDCODED_CLIENT_VERSION)
-        .value("platform", "DESKTOP")
-        .value("utcOffsetMinutes", 0)
-        .end()
-        .`object`("request")
-        .array("internalExperimentFlags")
-        .end()
-        .value("useSsl", true)
-        .end()
-        .`object`("user") // TODO: provide a way to enable restricted mode with:
- //  .value("enableSafetyMode", boolean)
-        .value("lockedSafetyMode", false)
-        .end()
-        .end()
-        .value("fetchLiveState", true)
-        .end().done().toByteArray(StandardCharsets.UTF_8)
+        val body = JsonWriter.string()
+            .`object`()
+            .`object`("context")
+            .`object`("client")
+            .value("hl", "en-GB")
+            .value("gl", "GB")
+            .value("clientName", WEB_CLIENT_NAME)
+            .value("clientVersion", WEB_HARDCODED_CLIENT_VERSION)
+            .value("platform", DESKTOP_CLIENT_PLATFORM)
+            .value("utcOffsetMinutes", 0)
+            .end()
+            .`object`("request")
+            .array("internalExperimentFlags")
+            .end()
+            .value("useSsl", true)
+            .end()
+            .`object`("user") // TODO: provide a way to enable restricted mode with:
+            //  .value("enableSafetyMode", boolean)
+            .value("lockedSafetyMode", false)
+            .end()
+            .end()
+            .value("fetchLiveState", true)
+            .end().done().toByteArray(StandardCharsets.UTF_8)
 
-        val headers = getClientHeaders(WEB_CLIENT_ID, HARDCODED_CLIENT_VERSION)
+        val headers = getClientHeaders(WEB_CLIENT_ID, WEB_HARDCODED_CLIENT_VERSION)
 
         // This endpoint is fetched by the YouTube website to get the items of its main menu and is
         // pretty lightweight (around 30kB)
@@ -676,7 +598,7 @@ object YoutubeParsingHelper {
      * Get the client version used by YouTube website on InnerTube requests.
      */
     @Throws(IOException::class, ExtractionException::class)
-    fun getClientVersion(): String? {
+    fun getClientVersion(): String {
         if (!clientVersion.isNullOrEmpty()) return clientVersion!!
 
         // Always extract the latest client version, by trying first to extract it from the
@@ -684,14 +606,13 @@ object YoutubeParsingHelper {
         // fingerprinting based on the client version used
         try { extractClientVersionFromSwJs() } catch (e: Exception) { extractClientVersionFromHtmlSearchResultsPage() }
 
-        if (clientVersionExtracted) return clientVersion
+        if (clientVersionExtracted) return clientVersion!!
 
         // Fallback to the hardcoded one if it is valid
         if (isHardcodedClientVersionValid()) {
-            clientVersion = HARDCODED_CLIENT_VERSION
-            return clientVersion
+            clientVersion = WEB_HARDCODED_CLIENT_VERSION
+            return clientVersion!!
         }
-
         throw ExtractionException("Could not get YouTube WEB client version")
     }
 
@@ -722,7 +643,7 @@ object YoutubeParsingHelper {
     fun getYoutubeMusicClientVersion(): String? {
         if (!youtubeMusicClientVersion.isNullOrEmpty()) return youtubeMusicClientVersion
         if (isHardcodedYoutubeMusicClientVersionValid) {
-            youtubeMusicClientVersion = HARDCODED_YOUTUBE_MUSIC_CLIENT_VERSION
+            youtubeMusicClientVersion = WEB_REMIX_HARDCODED_CLIENT_VERSION
             return youtubeMusicClientVersion
         }
 
@@ -958,201 +879,31 @@ object YoutubeParsingHelper {
                     + DISABLE_PRETTY_PRINT_PARAMETER, headers, body, localization)))
     }
 
-    @Throws(IOException::class, ExtractionException::class)
-    fun getJsonAndroidPostResponse(endpoint: String, body: ByteArray, localization: Localization, endPartOfUrlRequest: String?): JsonObject {
-        return getMobilePostResponse(endpoint, body, localization, getAndroidUserAgent(localization), endPartOfUrlRequest)
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    fun getJsonIosPostResponse(endpoint: String, body: ByteArray, localization: Localization, endPartOfUrlRequest: String?): JsonObject {
-        return getMobilePostResponse(endpoint, body, localization, getIosUserAgent(localization), endPartOfUrlRequest)
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    private fun getMobilePostResponse(endpoint: String, body: ByteArray, localization: Localization, userAgent: String,
-                                       endPartOfUrlRequest: String?): JsonObject {
-        val headers = mapOf("User-Agent" to listOf(userAgent), "X-Goog-Api-Format-Version" to listOf("2"))
-
-        val baseEndpointUrl = ((YOUTUBEI_V1_GAPIS_URL + endpoint) + "?" + DISABLE_PRETTY_PRINT_PARAMETER)
-
-        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(
-            if (endPartOfUrlRequest.isNullOrEmpty()) baseEndpointUrl else baseEndpointUrl + endPartOfUrlRequest,
-            headers, body, localization)))
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    fun prepareDesktopJsonBuilder(localization: Localization, contentCountry: ContentCountry): JsonBuilder<JsonObject> {
-        return prepareDesktopJsonBuilder(localization, contentCountry, null)
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    fun prepareDesktopJsonBuilder(localization: Localization, contentCountry: ContentCountry, visitorData: String?): JsonBuilder<JsonObject> {
-        // @formatter:off
-        var vData = visitorData
-        if (vData == null) vData = randomVisitorData(contentCountry)
-
+     @Throws(IOException::class, ExtractionException::class)
+     fun prepareDesktopJsonBuilder(localization: Localization, contentCountry: ContentCountry): JsonBuilder<JsonObject?> {
         // @formatter:off
         return JsonObject.builder()
-
             .`object`("context")
-        .`object`("client")
-        .value("hl", localization.localizationCode)
-        .value("gl", contentCountry.countryCode)
-        .value("clientName", "WEB")
-        .value("clientVersion", getClientVersion())
-        .value("originalUrl", "https://www.youtube.com")
-        .value("platform", "DESKTOP")
-            .value("utcOffsetMinutes", 0)
-            .value("visitorData", vData)
-            .end()
-        .`object`("request")
-        .array("internalExperimentFlags")
-        .end()
-        .value("useSsl", true)
-        .end()
-        .`object`("user") // TODO: provide a way to enable restricted mode with:
- //  .value("enableSafetyMode", boolean)
-        .value("lockedSafetyMode", false)
-        .end()
-        .end()
-            // @formatter:on
-    }
-
-    fun prepareAndroidMobileJsonBuilder(localization: Localization, contentCountry: ContentCountry): JsonBuilder<JsonObject> {
-        // @formatter:off
-        return JsonObject.builder()
-        .`object`("context")
-        .`object`("client")
-        .value("clientName", "ANDROID")
-        .value("clientVersion", ANDROID_YOUTUBE_CLIENT_VERSION)
-        .value("platform", "MOBILE")
-        .value("osName", "Android")
-        .value("osVersion", "14") /*
-                        A valid Android SDK version is required to be sure to get a valid player
-                        response
-                        If this parameter is not provided, the player response is replaced by an
-                        error saying the message "The following content is not available on this
-                        app. Watch this content on the latest version on YouTube" (it was
-                        previously a 5-minute video with this message)
-                        See https://github.com/XilinJia/Vista/issues/8713
-                        The Android SDK version corresponding to the Android version used in
-                        requests is sent
-                        */
-        .value("androidSdkVersion", 34)
-        .value("hl", localization.localizationCode)
-        .value("gl", contentCountry.countryCode)
-        .value("utcOffsetMinutes", 0)
-        .end()
-        .`object`("request")
-        .array("internalExperimentFlags")
-        .end()
-        .value("useSsl", true)
-        .end()
-        .`object`("user") // TODO: provide a way to enable restricted mode with:
- //  .value("enableSafetyMode", boolean)
-        .value("lockedSafetyMode", false)
-        .end()
-        .end()
-            // @formatter:on
-    }
-
-    fun prepareIosMobileJsonBuilder(localization: Localization, contentCountry: ContentCountry): JsonBuilder<JsonObject> {
-        // @formatter:off
-        return JsonObject.builder()
-        .`object`("context")
-        .`object`("client")
-        .value("clientName", "IOS")
-        .value("clientVersion", IOS_YOUTUBE_CLIENT_VERSION)
-        .value("deviceMake", "Apple") // Device model is required to get 60fps streams
-        .value("deviceModel", IOS_DEVICE_MODEL)
-        .value("platform", "MOBILE")
-        .value("osName", "iOS") /*
-                        The value of this field seems to use the following structure:
-                        "iOS major version.minor version.patch version.build version", where
-                        "patch version" is equal to 0 if it isn't set
-                        The build version corresponding to the iOS version used can be found on
-                        https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15
-                         */
-        .value("osVersion", IOS_OS_VERSION)
-            .value("visitorData", randomVisitorData(contentCountry))
+            .`object`("client")
             .value("hl", localization.localizationCode)
-        .value("gl", contentCountry.countryCode)
-        .value("utcOffsetMinutes", 0)
-        .end()
-        .`object`("request")
-        .array("internalExperimentFlags")
-        .end()
-        .value("useSsl", true)
-        .end()
-        .`object`("user") // TODO: provide a way to enable restricted mode with:
- //  .value("enableSafetyMode", boolean)
-        .value("lockedSafetyMode", false)
-        .end()
-        .end()
-            // @formatter:on
-    }
-
-    fun prepareTvHtml5EmbedJsonBuilder(localization: Localization, contentCountry: ContentCountry, videoId: String): JsonBuilder<JsonObject> {
-        // @formatter:off
-        return JsonObject.builder()
-        .`object`("context")
-        .`object`("client")
-        .value("clientName", "TVHTML5_SIMPLY_EMBEDDED_PLAYER")
-        .value("clientVersion", TVHTML5_SIMPLY_EMBED_CLIENT_VERSION)
-        .value("clientScreen", "EMBED")
-        .value("platform", "TV")
-        .value("hl", localization.localizationCode)
-        .value("gl", contentCountry.countryCode)
-        .value("utcOffsetMinutes", 0)
-        .end()
-        .`object`("thirdParty")
-        .value("embedUrl", "https://www.youtube.com/watch?v=$videoId")
-        .end()
-        .`object`("request")
-        .array("internalExperimentFlags")
-        .end()
-        .value("useSsl", true)
-        .end()
-        .`object`("user") // TODO: provide a way to enable restricted mode with:
- //  .value("enableSafetyMode", boolean)
-        .value("lockedSafetyMode", false)
-        .end()
-        .end()
-            // @formatter:on
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    fun getWebPlayerResponse(localization: Localization, contentCountry: ContentCountry, videoId: String): JsonObject {
-        val body = JsonWriter.string(
-            prepareDesktopJsonBuilder(localization, contentCountry)
-                .value(VIDEO_ID, videoId)
-                .value(CONTENT_CHECK_OK, true)
-                .value(RACY_CHECK_OK, true)
-                .done())
-            .toByteArray(StandardCharsets.UTF_8)
-        val url = (YOUTUBEI_V1_URL + "player" + "?" + DISABLE_PRETTY_PRINT_PARAMETER + "&\$fields=microformat,playabilityStatus,storyboards,videoDetails")
-
-        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, youTubeHeaders, body, localization)))
-    }
-
-    fun createTvHtml5EmbedPlayerBody(localization: Localization, contentCountry: ContentCountry, videoId: String,
-                                sts: Int, contentPlaybackNonce: String): ByteArray {
-        // @formatter:off
-        return JsonWriter.string(prepareTvHtml5EmbedJsonBuilder(localization, contentCountry, videoId)
-        .`object`("playbackContext")
-        .`object`("contentPlaybackContext") // Signature timestamp from the JavaScript base player is needed to get
- // working obfuscated URLs
-        .value("signatureTimestamp", sts)
-        .value("referer", "https://www.youtube.com/watch?v=$videoId")
-        .end()
-        .end()
-        .value(CPN, contentPlaybackNonce)
-        .value(VIDEO_ID, videoId)
-        .value(CONTENT_CHECK_OK, true)
-        .value(RACY_CHECK_OK, true)
-        .done())
-        .toByteArray(StandardCharsets.UTF_8)
-            // @formatter:on
+            .value("gl", contentCountry.countryCode)
+            .value("clientName", WEB_CLIENT_NAME)
+            .value("clientVersion", getClientVersion())
+            .value("originalUrl", "https://www.youtube.com")
+            .value("platform", DESKTOP_CLIENT_PLATFORM)
+            .value("utcOffsetMinutes", 0)
+            .end()
+            .`object`("request")
+            .array("internalExperimentFlags")
+            .end()
+            .value("useSsl", true)
+            .end()
+            .`object`("user") // TODO: provide a way to enable restricted mode with:
+            //  .value("enableSafetyMode", boolean)
+            .value("lockedSafetyMode", false)
+            .end()
+            .end()
+        // @formatter:on
     }
 
     /**
@@ -1165,7 +916,10 @@ object YoutubeParsingHelper {
      */
     fun getAndroidUserAgent(localization: Localization?): String {
         // Spoofing an Android 14 device with the hardcoded version of the Android app
-        return ("com.google.android.youtube/$ANDROID_YOUTUBE_CLIENT_VERSION (Linux; U; Android 14; ${(localization ?: Localization.DEFAULT).getCountryCode()}) gzip")
+        return ("com.google.android.youtube/" + ANDROID_CLIENT_VERSION
+                + " (Linux; U; Android 15; "
+                + (localization ?: Localization.DEFAULT).getCountryCode()
+                + ") gzip")
     }
 
     /**
@@ -1177,13 +931,20 @@ object YoutubeParsingHelper {
      * [Localization] provided
      */
     fun getIosUserAgent(localization: Localization?): String {
-
-        // Spoofing an iPhone 15 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app
-        return ("com.google.ios.youtube/" + IOS_YOUTUBE_CLIENT_VERSION
-                + "(" + IOS_DEVICE_MODEL + "; U; CPU iOS "
-                + IOS_USER_AGENT_VERSION + " like Mac OS X; "
+        return ("com.google.ios.youtube/" + IOS_CLIENT_VERSION + "(" + IOS_DEVICE_MODEL
+                + "; U; CPU iOS " + IOS_USER_AGENT_VERSION + " like Mac OS X; "
                 + (localization ?: Localization.DEFAULT).getCountryCode()
                 + ")")
+    }
+
+    /**
+     * Get the user-agent string used as the user-agent for InnerTube requests with the HTML5 TV
+     * client.
+     *
+     * @return the user-agent used for InnerTube requests with the TVHTML5 client
+     */
+    fun getTvHtml5UserAgent(): String {
+        return TVHTML5_USER_AGENT
     }
 
     /**
@@ -1192,7 +953,7 @@ object YoutubeParsingHelper {
      *
      * @param url The URL to be set as the origin and referrer.
      */
-    private fun getOriginReferrerHeaders(url: String): Map<String, List<String>> {
+    fun getOriginReferrerHeaders(url: String): Map<String, List<String>> {
         val urlList = listOf(url)
         return mapOf("Origin" to urlList, "Referer" to urlList)
     }
@@ -1204,7 +965,7 @@ object YoutubeParsingHelper {
      * @param name The X-YouTube-Client-Name value.
      * @param version X-YouTube-Client-Version value.
      */
-    private fun getClientHeaders(name: String, version: String): Map<String, List<String>> {
+    fun getClientHeaders(name: String, version: String): Map<String, List<String>> {
         return mapOf("X-YouTube-Client-Name" to listOf(name), "X-YouTube-Client-Version" to listOf(version))
     }
 
@@ -1350,15 +1111,24 @@ object YoutubeParsingHelper {
     }
 
     /**
-     * Check if the streaming URL is a URL from the YouTube `TVHTML5_SIMPLY_EMBEDDED_PLAYER`
-     * client.
+     * Check if the streaming URL is from the YouTube `WEB_EMBEDDED_PLAYER` client.
      *
-     * @param url the streaming URL on which check if it's a `TVHTML5_SIMPLY_EMBEDDED_PLAYER`
-     * streaming URL.
-     * @return true if it's a `TVHTML5_SIMPLY_EMBEDDED_PLAYER` streaming URL, false otherwise
+     * @param url the streaming URL to be checked.
+     * @return true if it's a `WEB_EMBEDDED_PLAYER` streaming URL, false otherwise
      */
-    fun isTvHtml5SimplyEmbeddedPlayerStreamingUrl(url: String): Boolean {
-        return isMatch(C_TVHTML5_SIMPLY_EMBEDDED_PLAYER_PATTERN, url)
+    fun isWebEmbeddedPlayerStreamingUrl(url: String): Boolean {
+        return isMatch(C_WEB_EMBEDDED_PLAYER_PATTERN, url)
+    }
+
+    /**
+     * Check if the streaming URL is a URL from the YouTube `TVHTML5` client.
+     *
+     * @param url the streaming URL on which check if it's a `TVHTML5`
+     * streaming URL.
+     * @return true if it's a `TVHTML5` streaming URL, false otherwise
+     */
+    fun isTvHtml5StreamingUrl(url: String): Boolean {
+        return isMatch(C_TVHTML5_PLAYER_PATTERN, url)
     }
 
     /**
@@ -1414,4 +1184,58 @@ object YoutubeParsingHelper {
             else -> null
         }
     }
+
+    @Throws(IOException::class, ExtractionException::class)
+    fun getVisitorDataFromInnertube(innertubeClientRequestInfo: InnertubeClientRequestInfo, localization: Localization, contentCountry: ContentCountry,
+            httpHeaders: MutableMap<String, List<String>>, innertubeDomainAndVersionEndpoint: String, embedUrl: String?, useGuideEndpoint: Boolean): String {
+        val builder = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, embedUrl)
+
+        val body = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
+
+        val visitorData = toJsonObject(getValidJsonResponseBody(downloader
+            .postWithContentTypeJson(
+                (innertubeDomainAndVersionEndpoint + (if (useGuideEndpoint) "guide" else "visitor_id") + "?" + DISABLE_PRETTY_PRINT_PARAMETER), httpHeaders, body)))
+            .getObject("responseContext")
+            .getString("visitorData")
+
+        if (visitorData.isNullOrEmpty()) { throw ParsingException("Could not get visitorData") }
+
+        return visitorData
+    }
+
+    fun prepareJsonBuilder(localization: Localization, contentCountry: ContentCountry, innertubeClientRequestInfo: InnertubeClientRequestInfo, embedUrl: String?): JsonBuilder<JsonObject?> {
+        val builder = JsonObject.builder()
+            .`object`("context")
+            .`object`("client")
+            .value("clientName", innertubeClientRequestInfo.clientInfo.clientName)
+            .value("clientVersion", innertubeClientRequestInfo.clientInfo.clientVersion)
+            .value("clientScreen", innertubeClientRequestInfo.clientInfo.clientScreen)
+            .value("platform", innertubeClientRequestInfo.deviceInfo.platform)
+
+        if (innertubeClientRequestInfo.clientInfo.visitorData != null) builder.value("visitorData", innertubeClientRequestInfo.clientInfo.visitorData)
+
+        if (innertubeClientRequestInfo.deviceInfo.deviceMake != null) builder.value("deviceMake", innertubeClientRequestInfo.deviceInfo.deviceMake)
+        if (innertubeClientRequestInfo.deviceInfo.deviceModel != null) builder.value("deviceModel", innertubeClientRequestInfo.deviceInfo.deviceModel)
+        if (innertubeClientRequestInfo.deviceInfo.osName != null) builder.value("osName", innertubeClientRequestInfo.deviceInfo.osName)
+        if (innertubeClientRequestInfo.deviceInfo.osVersion != null) builder.value("osVersion", innertubeClientRequestInfo.deviceInfo.osVersion)
+        if (innertubeClientRequestInfo.deviceInfo.androidSdkVersion > 0) builder.value("androidSdkVersion", innertubeClientRequestInfo.deviceInfo.androidSdkVersion)
+
+        builder.value("hl", localization.localizationCode).value("gl", contentCountry.countryCode).value("utcOffsetMinutes", 0).end()
+
+        if (embedUrl != null) builder.`object`("thirdParty").value("embedUrl", embedUrl).end()
+
+        builder.`object`("request")
+            .array("internalExperimentFlags")
+            .end()
+            .value("useSsl", true)
+            .end()
+            .`object`("user") // TODO: provide a way to enable restricted mode with:
+            //  .value("enableSafetyMode", boolean)
+            .value("lockedSafetyMode", false)
+            .end()
+            .end()
+
+        return builder
+    }
+
 }

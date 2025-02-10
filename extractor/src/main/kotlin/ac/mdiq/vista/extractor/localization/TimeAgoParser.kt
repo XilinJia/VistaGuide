@@ -7,15 +7,15 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.regex.MatchResult
 import java.util.regex.Pattern
 
 /**
  * A helper class that is meant to be used by services that need to parse durations such as
  * `23 seconds` and/or upload dates in the format `2 days ago` or similar.
  */
-class TimeAgoParser(private val patternsHolder: PatternsHolder) {
-    private val now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)
+class TimeAgoParser(private val patternsHolder: PatternsHolder, private val now: OffsetDateTime) {
+
+    constructor(patternsHolder: PatternsHolder) : this(patternsHolder, OffsetDateTime.now(ZoneOffset.UTC))
 
     /**
      * Parses a textual date in the format '2 days ago' into a Calendar representation which is then
@@ -29,63 +29,22 @@ class TimeAgoParser(private val patternsHolder: PatternsHolder) {
      * @throws ParsingException if the time unit could not be recognized
      */
     @Throws(ParsingException::class)
-    fun parse(textualDate: String): DateWrapper {
-        for ((chronoUnit, value)
-        in patternsHolder.specialCases()) {
-            for ((caseText, caseAmount) in value) {
-                if (textualDateMatches(textualDate, caseText)) return getResultFor(caseAmount, chronoUnit)
+    fun parse(textualDate: String?): DateWrapper {
+        for (caseUnitEntry in patternsHolder.specialCases().entries) {
+            val chronoUnit = caseUnitEntry.key
+            for (caseMapToAmountEntry in caseUnitEntry.value.entries) {
+                val caseText = caseMapToAmountEntry.key
+                val caseAmount = caseMapToAmountEntry.value
+                if (textualDateMatches(textualDate!!, caseText)) return getResultFor(caseAmount, chronoUnit)
             }
         }
-        return getResultFor(parseTimeAgoAmount(textualDate), parseChronoUnit(textualDate))
-    }
-
-    /**
-     * Parses a textual duration into a duration computer number.
-     *
-     * @param textualDuration the textual duration to parse
-     * @return the textual duration parsed, as a primitive `long`
-     * @throws ParsingException if the textual duration could not be parsed
-     */
-    @Throws(ParsingException::class)
-    fun parseDuration(textualDuration: String): Long {
-        // We can't use Matcher.results, as it is only available on Android 14 and above
-        val matcher = DURATION_PATTERN.matcher(textualDuration)
-        val results: MutableList<MatchResult> = ArrayList()
-        while (matcher.find()) {
-            results.add(matcher.toMatchResult())
-        }
-
-        return results.stream()
-            .map { match: MatchResult ->
-                val digits = match.group(1)
-                val word = match.group(2)
-                val amount = try {
-                    digits.toInt()
-                } catch (ignored: NumberFormatException) {
-                    1
-                }
-
-                val unit: ChronoUnit
-                try {
-                    unit = parseChronoUnit(word)
-                } catch (ignored: ParsingException) {
-                    return@map 0L
-                }
-                amount * unit.duration.seconds
-            }
-            .filter { n: Long -> n > 0 }
-            .reduce { a: Long, b: Long -> java.lang.Long.sum(a, b) }
-            .orElseThrow {
-                ParsingException("Could not parse duration \"$textualDuration\"")
-            }
+        return getResultFor(parseTimeAgoAmount(textualDate!!), parseChronoUnit(textualDate))
     }
 
     private fun parseTimeAgoAmount(textualDate: String): Int {
-        return try {
-            textualDate.replace("\\D+".toRegex(), "").toInt()
+        return try { textualDate.replace("\\D+".toRegex(), "").toInt()
         } catch (ignored: NumberFormatException) {
-            // If there is no valid number in the textual date,
-            // assume it is 1 (as in 'a second ago').
+            // If there is no valid number in the textual date, assume it is 1 (as in 'a second ago').
             1
         }
     }
@@ -93,9 +52,7 @@ class TimeAgoParser(private val patternsHolder: PatternsHolder) {
     @Throws(ParsingException::class)
     private fun parseChronoUnit(textualDate: String): ChronoUnit {
         return patternsHolder.asMap().entries.stream()
-            .filter { e: Map.Entry<ChronoUnit?, Collection<String>> ->
-                e.value.stream().anyMatch { agoPhrase: String -> textualDateMatches(textualDate, agoPhrase) }
-            }
+            .filter { e: Map.Entry<ChronoUnit?, Collection<String>> -> e.value.stream().anyMatch { agoPhrase: String -> textualDateMatches(textualDate, agoPhrase) } }
             .map { it.key }
             .findFirst()
             .orElseThrow { ParsingException("Unable to parse the date: $textualDate") }
@@ -135,9 +92,5 @@ class TimeAgoParser(private val patternsHolder: PatternsHolder) {
         }
         if (isApproximation) offsetDateTime = offsetDateTime.truncatedTo(ChronoUnit.HOURS)
         return DateWrapper(offsetDateTime, isApproximation)
-    }
-
-    companion object {
-        private val DURATION_PATTERN: Pattern = Pattern.compile("(?:(\\d+) )?([A-z]+)")
     }
 }

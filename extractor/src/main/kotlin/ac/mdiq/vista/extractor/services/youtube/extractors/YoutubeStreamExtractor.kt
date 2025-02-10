@@ -20,9 +20,6 @@
  */
 package ac.mdiq.vista.extractor.services.youtube.extractors
 
-import com.grack.nanojson.JsonArray
-import com.grack.nanojson.JsonObject
-import com.grack.nanojson.JsonWriter
 import ac.mdiq.vista.extractor.*
 import ac.mdiq.vista.extractor.channel.ChannelExtractor.Companion.UNKNOWN_SUBSCRIBER_COUNT
 import ac.mdiq.vista.extractor.downloader.Downloader
@@ -33,6 +30,8 @@ import ac.mdiq.vista.extractor.localization.TimeAgoPatternsManager.getTimeAgoPar
 import ac.mdiq.vista.extractor.services.youtube.ItagItem
 import ac.mdiq.vista.extractor.services.youtube.ItagItem.Companion.getItag
 import ac.mdiq.vista.extractor.services.youtube.ItagItem.ItagType
+import ac.mdiq.vista.extractor.services.youtube.PoTokenProvider
+import ac.mdiq.vista.extractor.services.youtube.PoTokenResult
 import ac.mdiq.vista.extractor.services.youtube.YoutubeDescriptionHelper.attributedDescriptionToHtml
 import ac.mdiq.vista.extractor.services.youtube.YoutubeJavaScriptPlayerManager.deobfuscateSignature
 import ac.mdiq.vista.extractor.services.youtube.YoutubeJavaScriptPlayerManager.getSignatureTimestamp
@@ -42,22 +41,16 @@ import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.CONTENT_CHE
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.CPN
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.RACY_CHECK_OK
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.VIDEO_ID
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.createTvHtml5EmbedPlayerBody
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.extractAudioTrackType
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.fixThumbnailUrl
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.generateContentPlaybackNonce
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.generateTParameter
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getImagesFromThumbnailsArray
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getJsonAndroidPostResponse
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getJsonIosPostResponse
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getJsonPostResponse
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getWebPlayerResponse
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isVerified
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.parseDateFrom
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.prepareAndroidMobileJsonBuilder
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.prepareDesktopJsonBuilder
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.prepareIosMobileJsonBuilder
+import ac.mdiq.vista.extractor.services.youtube.YoutubeStreamHelper
 import ac.mdiq.vista.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory
 import ac.mdiq.vista.extractor.stream.*
 import ac.mdiq.vista.extractor.utils.JsonUtils.getObject
@@ -67,6 +60,9 @@ import ac.mdiq.vista.extractor.utils.Pair
 import ac.mdiq.vista.extractor.utils.Parser.compatParseMap
 import ac.mdiq.vista.extractor.utils.Utils.mixedNumberWordToLong
 import ac.mdiq.vista.extractor.utils.Utils.removeNonDigitCharacters
+import com.grack.nanojson.JsonArray
+import com.grack.nanojson.JsonObject
+import com.grack.nanojson.JsonWriter
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
@@ -75,9 +71,9 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.function.Function
 import java.util.stream.Collectors
-
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+
 
 class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler) : StreamExtractor(service, linkHandler) {
     private var playerResponse: JsonObject? = null
@@ -85,8 +81,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 
     private var iosStreamingData: JsonObject? = null
     private var androidStreamingData: JsonObject? = null
-    private var tvHtml5SimplyEmbedStreamingData: JsonObject? = null
-
+    private var html5StreamingData: JsonObject? = null
 
     private var videoPrimaryInfoRenderer: JsonObject? = null
         get() {
@@ -144,7 +139,11 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
     // three different strings are used.
     private var iosCpn: String? = null
     private var androidCpn: String? = null
-    private var tvHtml5SimplyEmbedCpn: String? = null
+    private var html5Cpn: String? = null
+
+    private var html5StreamingUrlsPoToken: String? = null
+    private var androidStreamingUrlsPoToken: String? = null
+    private var iosStreamingUrlsPoToken: String? = null
 
     @Throws(ParsingException::class)
     override fun getName(): String {
@@ -266,9 +265,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             try {
                 val duration: String = playerResponse?.getObject("videoDetails")?.getString("lengthSeconds") ?: "0"
                 return duration.toLong()
-            } catch (e: Exception) {
-                return getDurationFromFirstAdaptiveFormat(listOfNotNull(iosStreamingData, androidStreamingData, tvHtml5SimplyEmbedStreamingData)).toLong()
-            }
+            } catch (e: Exception) { return getDurationFromFirstAdaptiveFormat(listOfNotNull(html5StreamingData, androidStreamingData, iosStreamingData)).toLong() }
         }
 
     @Throws(ParsingException::class)
@@ -391,7 +388,10 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             assertPageFetched()
             // There is no DASH manifest available in the iOS clients and the DASH manifest of the
             // Android client doesn't contain all available streams (mainly the WEBM ones)
-            return getManifestUrl("dash", listOf(androidStreamingData, tvHtml5SimplyEmbedStreamingData))
+            return if (androidStreamingData == null || androidStreamingUrlsPoToken == null || html5StreamingData == null || html5StreamingUrlsPoToken == null) ""
+            else getManifestUrl("dash",
+                listOf(Pair(androidStreamingData!!, androidStreamingUrlsPoToken!!), Pair(html5StreamingData!!, html5StreamingUrlsPoToken!!)),
+                "mpd_version=7")
         }
 
     @get:Throws(ParsingException::class)
@@ -401,7 +401,12 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             // Return HLS manifest of the iOS client first because on livestreams, the HLS manifest
             // returned has separated audio and video streams
             // Also, on videos, non-iOS clients don't have an HLS manifest URL in their player response
-            return getManifestUrl("hls", listOf(iosStreamingData, androidStreamingData, tvHtml5SimplyEmbedStreamingData))
+            return if (iosStreamingData == null || iosStreamingUrlsPoToken == null || androidStreamingData == null || androidStreamingUrlsPoToken == null || html5StreamingData == null || html5StreamingUrlsPoToken == null) ""
+            else getManifestUrl("hls",
+                listOf(Pair(iosStreamingData!!, iosStreamingUrlsPoToken!!),
+                    Pair(androidStreamingData!!, androidStreamingUrlsPoToken!!),
+                    Pair(html5StreamingData!!, html5StreamingUrlsPoToken!!)),
+                "")
         }
 
     @get:Throws(ExtractionException::class)
@@ -465,7 +470,8 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 
     private fun setStreamType() {
         streamType = when {
-            playerResponse!!.getObject("playabilityStatus").has("liveStreamability") -> StreamType.LIVE_STREAM
+            playerResponse == null -> StreamType.VIDEO_STREAM
+            playerResponse!!.getObject(PLAYABILITY_STATUS).has("liveStreamability") -> StreamType.LIVE_STREAM
             playerResponse!!.getObject("videoDetails").getBoolean("isPostLiveDvr", false) -> StreamType.POST_LIVE_STREAM
             else -> StreamType.VIDEO_STREAM
         }
@@ -516,7 +522,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
     override val errorMessage: String?
         get() {
             return try {
-                getTextFromObject(playerResponse!!.getObject("playabilityStatus")
+                getTextFromObject(playerResponse!!.getObject(PLAYABILITY_STATUS)
                     .getObject("errorScreen").getObject("playerErrorMessageRenderer")
                     .getObject("reason"))
             } catch (e: NullPointerException) { null /* No error message */ }
@@ -529,197 +535,217 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         val localization: Localization = extractorLocalization
         val contentCountry: ContentCountry = extractorContentCountry
 
-        val webPlayerResponse: JsonObject = getWebPlayerResponse(localization, contentCountry, videoId)
+        val poTokenproviderInstance: PoTokenProvider? = poTokenProvider
+        val noPoTokenProviderSet: Boolean = poTokenproviderInstance == null
 
-        if (isPlayerResponseNotValid(webPlayerResponse, videoId)) {
-            // Check the playability status, as private and deleted videos and invalid video IDs do
-            // not return the ID provided in the player response
-            // When the requested video is playable and a different video ID is returned, it has
-            // the OK playability status, meaning the ExtractionException after this check will be
-            // thrown
-            checkPlayabilityStatus(webPlayerResponse, webPlayerResponse.getObject("playabilityStatus"))
-            throw ExtractionException("Initial WEB player response is not valid")
-        }
-
-        // Save the webPlayerResponse into playerResponse in the case the video cannot be played,
-        // so some metadata can be retrieved
-        playerResponse = webPlayerResponse
-
-        // Use the player response from the player endpoint of the desktop internal API because
-        // there can be restrictions on videos in the embedded player.
-        // E.g. if a video is age-restricted, the embedded player's playabilityStatus says that
-        // the video cannot be played outside of YouTube, but does not show the original message.
-        val playabilityStatus: JsonObject = webPlayerResponse.getObject("playabilityStatus")
-
-        val isAgeRestricted: Boolean = "login_required".equals(playabilityStatus.getString("status"), ignoreCase = true)
-                && playabilityStatus.getString("reason", "").contains("age")
+        fetchHtml5Client(localization, contentCountry, videoId, poTokenproviderInstance, noPoTokenProviderSet)
 
         setStreamType()
 
-        if (isAgeRestricted) {
-            fetchTvHtml5EmbedJsonPlayer(contentCountry, localization, videoId)
+        val androidPoTokenResult: PoTokenResult? = if (noPoTokenProviderSet) null else poTokenproviderInstance.getAndroidClientPoToken(videoId)
+        fetchAndroidClient(localization, contentCountry, videoId, androidPoTokenResult)
 
-            // If no streams can be fetched in the TVHTML5 simply embed client, the video should be
-            // age-restricted, therefore throw an AgeRestrictedContentException explicitly.
-            if (tvHtml5SimplyEmbedStreamingData == null) throw AgeRestrictedContentException("This age-restricted video cannot be watched.")
-
-            // Refresh the stream type because the stream type may be not properly known for
-            // age-restricted videos
-            setStreamType()
-        } else {
-            checkPlayabilityStatus(webPlayerResponse, playabilityStatus)
-
-            // Fetching successfully the iOS player is mandatory to get streams
-            fetchIosMobileJsonPlayer(contentCountry, localization, videoId)
-
-            // Ignore exceptions related to ANDROID client fetch or parsing, as it is not
-            // compulsory to play contents
-            try { fetchAndroidMobileJsonPlayer(contentCountry, localization, videoId) } catch (ignored: Exception) { }
+        if (fetchIosClient) {
+            val iosPoTokenResult: PoTokenResult? = if (noPoTokenProviderSet) null else poTokenproviderInstance.getIosClientPoToken(videoId)
+            fetchIosClient(localization, contentCountry, videoId, iosPoTokenResult)
         }
 
-        // The microformat JSON object of the content is only returned on the WEB client,
-        // so we need to store it instead of getting it directly from the playerResponse
-        playerMicroFormatRenderer = webPlayerResponse.getObject("microformat").getObject("playerMicroformatRenderer")
-
-        val body: ByteArray = JsonWriter.string(
+        val nextBody: ByteArray = JsonWriter.string(
             prepareDesktopJsonBuilder(localization, contentCountry)
                 .value(VIDEO_ID, videoId)
                 .value(CONTENT_CHECK_OK, true)
                 .value(RACY_CHECK_OK, true)
                 .done())
             .toByteArray(StandardCharsets.UTF_8)
-        nextResponse = getJsonPostResponse(NEXT, body, localization)
+        nextResponse = getJsonPostResponse(NEXT, nextBody, localization)
     }
 
     @Throws(ParsingException::class)
-    private fun checkPlayabilityStatus(youtubePlayerResponse: JsonObject, playabilityStatus: JsonObject) {
-        var status: String? = playabilityStatus.getString("status")
+    private fun checkPlayabilityStatus(playabilityStatus: JsonObject) {
+        val status = playabilityStatus.getString("status")
         if (status == null || status.equals("ok", ignoreCase = true)) return
 
-        // If status exist, and is not "OK", throw the specific exception based on error message
-        // or a ContentNotAvailableException with the reason text if it's an unknown reason.
-        val newPlayabilityStatus: JsonObject = youtubePlayerResponse.getObject("playabilityStatus")
-        status = newPlayabilityStatus.getString("status")
-        val reason: String? = newPlayabilityStatus.getString("reason")
+        val reason = playabilityStatus.getString("reason")
 
-        if (status.equals("login_required", ignoreCase = true) && reason == null) {
-            val message: String? = newPlayabilityStatus.getArray("messages").getString(0)
-            if (message != null && message.contains("private")) throw PrivateContentException("This video is private.")
+        if (status.equals("login_required", ignoreCase = true)) {
+            if (reason == null) {
+                val message = playabilityStatus.getArray("messages").getString(0)
+                if (message != null && message.contains("private")) throw PrivateContentException("This video is private")
+            } else if (reason.contains("age")) throw AgeRestrictedContentException("This age-restricted video cannot be watched anonymously")
         }
 
         if ((status.equals("unplayable", ignoreCase = true) || status.equals("error", ignoreCase = true)) && reason != null) {
             if (reason.contains("Music Premium")) throw YoutubeMusicPremiumContentException()
             if (reason.contains("payment")) throw PaidContentException("This video is a paid video")
+
             if (reason.contains("members-only")) throw PaidContentException("This video is only available" + " for members of the channel of this video")
 
             if (reason.contains("unavailable")) {
-                val detailedErrorMessage: String? = getTextFromObject(newPlayabilityStatus
+                val detailedErrorMessage = getTextFromObject(playabilityStatus
                     .getObject("errorScreen")
                     .getObject("playerErrorMessageRenderer")
                     .getObject("subreason"))
-                if (detailedErrorMessage != null && detailedErrorMessage.contains("country"))
-                    throw GeographicRestrictionException("This video is not available in client's country.")
-                else throw ContentNotAvailableException(Objects.requireNonNullElse(detailedErrorMessage, reason))
+                if (detailedErrorMessage != null && detailedErrorMessage.contains("country")) throw GeographicRestrictionException("This video is not available in client's country.")
+                else throw ContentNotAvailableException(Objects.requireNonNullElse<String?>(detailedErrorMessage, reason))
+            }
+            if (reason.contains("age-restricted")) throw AgeRestrictedContentException("This age-restricted video cannot be watched anonymously")
+        }
+        throw ContentNotAvailableException("Got error: \"" + reason + "\"")
+    }
+
+    @Throws(IOException::class, ExtractionException::class)
+    private fun fetchHtml5Client(localization: Localization, contentCountry: ContentCountry,
+                                 videoId: String, poTokenProviderInstance: PoTokenProvider?, noPoTokenProviderSet: Boolean) {
+        html5Cpn = generateContentPlaybackNonce()
+
+        // Suppress NPE warning as nullability is already checked before and passed with
+        // noPoTokenProviderSet
+        val webPoTokenResult: PoTokenResult? = if (noPoTokenProviderSet) null else poTokenProviderInstance?.getWebClientPoToken(videoId)
+        val webPlayerResponse: JsonObject?
+        if (noPoTokenProviderSet || webPoTokenResult == null) {
+            webPlayerResponse = YoutubeStreamHelper.getWebMetadataPlayerResponse(localization, contentCountry, videoId)
+
+            throwExceptionIfPlayerResponseNotValid(webPlayerResponse, videoId)
+
+            // Save the webPlayerResponse into playerResponse in the case the video cannot be
+            // played, so some metadata can be retrieved
+            playerResponse = webPlayerResponse
+
+            // The microformat JSON object of the content is only returned on the WEB client,
+            // so we need to store it instead of getting it directly from the playerResponse
+            playerMicroFormatRenderer = playerResponse!!.getObject("microformat").getObject("playerMicroformatRenderer")
+
+            val playabilityStatus = webPlayerResponse.getObject(PLAYABILITY_STATUS)
+
+            if (isVideoAgeRestricted(playabilityStatus!!)) {
+                fetchHtml5EmbedClient(localization, contentCountry, videoId, if (noPoTokenProviderSet) null else poTokenProviderInstance?.getWebEmbedClientPoToken(videoId))
+            } else {
+                checkPlayabilityStatus(playabilityStatus)
+                val tvHtml5PlayerResponse: JsonObject =
+                    YoutubeStreamHelper.getTvHtml5PlayerResponse(localization, contentCountry, videoId, html5Cpn!!, getSignatureTimestamp(videoId))
+
+                if (isPlayerResponseNotValid(tvHtml5PlayerResponse, videoId)) throw ExtractionException("TVHTML5 player response is not valid")
+
+                html5StreamingData = tvHtml5PlayerResponse.getObject(STREAMING_DATA)
+                playerCaptionsTracklistRenderer = tvHtml5PlayerResponse.getObject(CAPTIONS).getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
+            }
+        } else {
+            webPlayerResponse = YoutubeStreamHelper.getWebFullPlayerResponse(
+                localization, contentCountry, videoId, html5Cpn!!, webPoTokenResult, getSignatureTimestamp(videoId))
+
+            throwExceptionIfPlayerResponseNotValid(webPlayerResponse, videoId)
+
+            // Save the webPlayerResponse into playerResponse in the case the video cannot be
+            // played, so some metadata can be retrieved
+            playerResponse = webPlayerResponse
+
+            // The microformat JSON object of the content is only returned on the WEB client,
+            // so we need to store it instead of getting it directly from the playerResponse
+            playerMicroFormatRenderer = playerResponse!!.getObject("microformat").getObject("playerMicroformatRenderer")
+
+            val playabilityStatus = webPlayerResponse.getObject(PLAYABILITY_STATUS)
+
+            if (isVideoAgeRestricted(playabilityStatus!!)) {
+                fetchHtml5EmbedClient(localization, contentCountry, videoId, poTokenProviderInstance?.getWebEmbedClientPoToken(videoId))
+            } else {
+                checkPlayabilityStatus(playabilityStatus)
+                html5StreamingData = webPlayerResponse.getObject(STREAMING_DATA)
+                playerCaptionsTracklistRenderer = webPlayerResponse.getObject(CAPTIONS).getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
+                html5StreamingUrlsPoToken = webPoTokenResult.streamingDataPoToken
             }
         }
-        throw ContentNotAvailableException("Got error: \"$reason\"")
     }
 
-    /**
-     * Fetch the Android Mobile API and assign the streaming data to the androidStreamingData JSON
-     * object.
-     */
-    @Throws(IOException::class, ExtractionException::class)
-    private fun fetchAndroidMobileJsonPlayer(contentCountry: ContentCountry, localization: Localization, videoId: String) {
-        androidCpn = generateContentPlaybackNonce()
-        val mobileBody: ByteArray = JsonWriter.string(
-            prepareAndroidMobileJsonBuilder(localization, contentCountry)
-                .`object`("playerRequest")
-                .value(VIDEO_ID, videoId)
-                .end()
-                .value("disablePlayerResponse", false)
-                .value(VIDEO_ID, videoId)
-                .value(CPN, androidCpn)
-                .value(CONTENT_CHECK_OK, true)
-                .value(RACY_CHECK_OK, true)
-                .done())
-            .toByteArray(StandardCharsets.UTF_8)
-
-        val androidPlayerResponse: JsonObject = getJsonAndroidPostResponse("reel/reel_item_watch", mobileBody, localization,
-            "&t=" + generateTParameter() + "&id=" + videoId + "&\$fields=playerResponse")
-
-        val playerResponseObject: JsonObject = androidPlayerResponse.getObject("playerResponse")
-        if (isPlayerResponseNotValid(playerResponseObject, videoId)) return
-
-//        println("fetchAndroidMobileJsonPlayer playerResponseObject: $playerResponseObject")
-        val streamingData: JsonObject = playerResponseObject.getObject(STREAMING_DATA)
-        if (!streamingData.isEmpty()) {
-            androidStreamingData = streamingData
-            if (playerCaptionsTracklistRenderer.isNullOrEmpty())
-                playerCaptionsTracklistRenderer = playerResponseObject.getObject("captions").getObject("playerCaptionsTracklistRenderer")
+    @Throws(ExtractionException::class)
+    private fun throwExceptionIfPlayerResponseNotValid(webPlayerResponse: JsonObject, videoId: String) {
+        if (isPlayerResponseNotValid(webPlayerResponse, videoId)) {
+            // Check the playability status, as private and deleted videos and invalid video
+            // IDs do not return the ID provided in the player response
+            // When the requested video is playable and a different video ID is returned, it
+            // has the OK playability status, meaning the ExtractionException after this check
+            // will be thrown
+            checkPlayabilityStatus(webPlayerResponse.getObject(PLAYABILITY_STATUS))
+            throw ExtractionException("WEB player response is not valid")
         }
     }
 
-    /**
-     * Fetch the iOS Mobile API and assign the streaming data to the iosStreamingData JSON
-     * object.
-     */
     @Throws(IOException::class, ExtractionException::class)
-    private fun fetchIosMobileJsonPlayer(contentCountry: ContentCountry, localization: Localization, videoId: String) {
-        iosCpn = generateContentPlaybackNonce()
-        val mobileBody: ByteArray = JsonWriter.string(
-            prepareIosMobileJsonBuilder(localization, contentCountry)
-                .value(VIDEO_ID, videoId)
-                .value(CPN, iosCpn)
-                .value(CONTENT_CHECK_OK, true)
-                .value(RACY_CHECK_OK, true)
-                .done())
-            .toByteArray(StandardCharsets.UTF_8)
+    private fun fetchHtml5EmbedClient(localization: Localization,
+                                      contentCountry: ContentCountry,
+                                      videoId: String,
+                                      webEmbedPoTokenResult: PoTokenResult?) {
+        html5Cpn = generateContentPlaybackNonce()
 
-        val iosPlayerResponse: JsonObject = getJsonIosPostResponse(PLAYER, mobileBody, localization, ("&t=" + generateTParameter() + "&id=" + videoId))
+        val webEmbeddedPlayerResponse: JsonObject =
+            YoutubeStreamHelper.getWebEmbeddedPlayerResponse(localization, contentCountry,
+                videoId, html5Cpn!!, webEmbedPoTokenResult, getSignatureTimestamp(videoId))
 
-        if (isPlayerResponseNotValid(iosPlayerResponse, videoId)) throw ExtractionException("IOS player response is not valid")
+        // Save the webEmbeddedPlayerResponse into playerResponse in the case the video cannot be
+        // played, so some metadata can be retrieved
+        playerResponse = webEmbeddedPlayerResponse
 
-        val streamingData: JsonObject = iosPlayerResponse.getObject(STREAMING_DATA)
-        if (!streamingData.isEmpty()) {
-            iosStreamingData = streamingData
-            playerCaptionsTracklistRenderer = iosPlayerResponse.getObject("captions").getObject("playerCaptionsTracklistRenderer")
+        // Check if the playability status in the player response, if the age-restriction could not
+        // be bypassed, an exception will be thrown
+        checkPlayabilityStatus(webEmbeddedPlayerResponse.getObject(PLAYABILITY_STATUS))
+
+        if (isPlayerResponseNotValid(webEmbeddedPlayerResponse, videoId)) throw ExtractionException("WEB_EMBEDDED_PLAYER player response is not valid")
+
+        html5StreamingData = webEmbeddedPlayerResponse.getObject(STREAMING_DATA)
+        playerCaptionsTracklistRenderer = webEmbeddedPlayerResponse.getObject(CAPTIONS).getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
+        if (webEmbedPoTokenResult != null) html5StreamingUrlsPoToken = webEmbedPoTokenResult.streamingDataPoToken
+    }
+
+    private fun fetchAndroidClient(localization: Localization, contentCountry: ContentCountry, videoId: String, androidPoTokenResult: PoTokenResult?) {
+        try {
+            androidCpn = generateContentPlaybackNonce()
+            val androidPlayerResponse: JsonObject = if (androidPoTokenResult == null) {
+                YoutubeStreamHelper.getAndroidReelPlayerResponse(contentCountry, localization, videoId, androidCpn!!)
+            } else {
+                YoutubeStreamHelper.getAndroidPlayerResponse(contentCountry, localization, videoId, androidCpn!!, androidPoTokenResult)
+            }
+
+            if (!isPlayerResponseNotValid(androidPlayerResponse, videoId)) {
+                androidStreamingData = androidPlayerResponse.getObject(STREAMING_DATA)
+
+                if (playerCaptionsTracklistRenderer.isNullOrEmpty())
+                    playerCaptionsTracklistRenderer = androidPlayerResponse.getObject(CAPTIONS).getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
+
+                if (androidPoTokenResult != null) androidStreamingUrlsPoToken = androidPoTokenResult.streamingDataPoToken
+            }
+        } catch (ignored: java.lang.Exception) {
+            // Ignore exceptions related to ANDROID client fetch or parsing, as it is not
+            // compulsory to play contents
         }
     }
 
-    /**
-     * Download the `TVHTML5_SIMPLY_EMBEDDED_PLAYER` JSON player as an embed client to bypass
-     * some age-restrictions and assign the streaming data to the `html5StreamingData` JSON
-     * object.
-     *
-     * @param contentCountry the content country to use
-     * @param localization   the localization to use
-     * @param videoId        the video id
-     */
-    @Throws(IOException::class, ExtractionException::class)
-    private fun fetchTvHtml5EmbedJsonPlayer(contentCountry: ContentCountry, localization: Localization, videoId: String) {
-        tvHtml5SimplyEmbedCpn = generateContentPlaybackNonce()
+    private fun fetchIosClient(localization: Localization,
+                               contentCountry: ContentCountry,
+                               videoId: String,
+                               iosPoTokenResult: PoTokenResult?) {
+        try {
+            iosCpn = generateContentPlaybackNonce()
 
-        val tvHtml5EmbedPlayerResponse: JsonObject = getJsonPostResponse(PLAYER,
-            createTvHtml5EmbedPlayerBody(localization, contentCountry, videoId, getSignatureTimestamp(videoId), tvHtml5SimplyEmbedCpn!!), localization)
+            val iosPlayerResponse: JsonObject = YoutubeStreamHelper.getIosPlayerResponse(contentCountry, localization, videoId, iosCpn!!, iosPoTokenResult)
 
-        if (isPlayerResponseNotValid(tvHtml5EmbedPlayerResponse, videoId)) throw ExtractionException("TVHTML5 embed player response is not valid")
+            if (!isPlayerResponseNotValid(iosPlayerResponse, videoId)) {
+                iosStreamingData = iosPlayerResponse.getObject(STREAMING_DATA)
 
-        val streamingData: JsonObject = tvHtml5EmbedPlayerResponse.getObject(STREAMING_DATA)
-        if (!streamingData.isEmpty()) {
-            playerResponse = tvHtml5EmbedPlayerResponse
-            tvHtml5SimplyEmbedStreamingData = streamingData
-            playerCaptionsTracklistRenderer = playerResponse!!.getObject("captions").getObject("playerCaptionsTracklistRenderer")
+                if (playerCaptionsTracklistRenderer.isNullOrEmpty())
+                    playerCaptionsTracklistRenderer = iosPlayerResponse.getObject(CAPTIONS).getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
+
+                if (iosPoTokenResult != null) iosStreamingUrlsPoToken = iosPoTokenResult.streamingDataPoToken
+            }
+        } catch (ignored: java.lang.Exception) {
+            // Ignore exceptions related to IOS client fetch or parsing, as it is not
+            // compulsory to play contents
         }
     }
-
 
     private fun getVideoSecondaryInfoRenderer(): JsonObject {
         if (videoSecondaryInfoRenderer != null) return videoSecondaryInfoRenderer!!
         videoSecondaryInfoRenderer = getVideoInfoRenderer("videoSecondaryInfoRenderer")
         return videoSecondaryInfoRenderer!!
     }
-
 
     private fun getVideoInfoRenderer(videoRendererName: String): JsonObject {
         return nextResponse!!.getObject("contents")
@@ -735,7 +761,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             .findFirst()
             .orElse(JsonObject())
     }
-
 
     @Throws(ParsingException::class)
     private fun <T : Stream> getItags(streamingDataKey: String, itagTypeWanted: ItagType, streamBuilderHelper: Function<ItagInfo, T>,
@@ -753,9 +778,11 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
                 As age-restricted videos are not common, use tvHtml5SimplyEmbedStreamingData
                 last, which will be the only one not empty for age-restricted content
                  */
-            java.util.stream.Stream.of(Pair(iosStreamingData, iosCpn), Pair(androidStreamingData, androidCpn), Pair(tvHtml5SimplyEmbedStreamingData, tvHtml5SimplyEmbedCpn))
-                .flatMap { pair: Pair<JsonObject?, String?> ->
-                    getStreamsFromStreamingDataKey(videoId, pair.first, streamingDataKey, itagTypeWanted, pair.second?:"") }
+            java.util.stream.Stream.of(
+                Pair(html5StreamingData, Pair(html5Cpn, html5StreamingUrlsPoToken)),
+                Pair(androidStreamingData, Pair(androidCpn, androidStreamingUrlsPoToken)),
+                Pair(iosStreamingData, Pair(iosCpn, iosStreamingUrlsPoToken)))
+                .flatMap { pair -> getStreamsFromStreamingDataKey(videoId, pair.first, streamingDataKey, itagTypeWanted, pair.second.first!!, pair.second.second!!)}
                 .map(streamBuilderHelper)
                 .forEachOrdered { stream: T -> if (!Stream.containSimilarStream(stream, streamList)) streamList.add(stream) }
             return streamList
@@ -855,25 +882,8 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 
 
     private fun getStreamsFromStreamingDataKey(videoId: String, streamingData: JsonObject?, streamingDataKey: String,
-                                               itagTypeWanted: ItagType, contentPlaybackNonce: String): java.util.stream.Stream<ItagInfo> {
+                                               itagTypeWanted: ItagType, contentPlaybackNonce: String, poToken: String): java.util.stream.Stream<ItagInfo> {
         if (streamingData == null || !streamingData.has(streamingDataKey)) return java.util.stream.Stream.empty()
-
-//        return streamingData.getArray(streamingDataKey).stream()
-//            .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
-//            .map { obj: Any? -> JsonObject::class.java.cast(obj) }
-//            .map { formatData: JsonObject ->
-//                try {
-//                    val itagItem: ItagItem = getItag(formatData.getInt("itag"))
-//                    if (itagItem.itagType == itagTypeWanted)
-//                        return@map buildAndAddItagInfoToList(videoId, formatData, itagItem, itagItem.itagType, contentPlaybackNonce)
-//                } catch (ignored: ExtractionException) {
-//                    // If the itag is not supported, the n parameter of HTML5 clients cannot be
-//                    // decoded or buildAndAddItagInfoToList fails, we end up here
-//                }
-//                null
-//            }
-//            .filter { obj: ItagInfo? -> Objects.nonNull(obj) }
-//            .map {it!!}
 
         return streamingData.getArray(streamingDataKey).stream()
             .filter { it is JsonObject }  // Filter elements to ensure they're JsonObject
@@ -883,7 +893,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 //                    println("getStreamsFromStreamingDataKey formatData: $formatData")
                     val itagItem: ItagItem = getItag(formatData.getInt("itag"))
                     if (itagItem.itagType == itagTypeWanted)
-                        return@map buildAndAddItagInfoToList(videoId, formatData, itagItem, itagItem.itagType, contentPlaybackNonce)
+                        return@map buildAndAddItagInfoToList(videoId, formatData, itagItem, itagItem.itagType, contentPlaybackNonce, poToken)
                 } catch (ignored: ExtractionException) { }
                 null
             }
@@ -893,7 +903,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 
     @Throws(ExtractionException::class)
     private fun buildAndAddItagInfoToList(videoId: String, formatData: JsonObject, itagItem: ItagItem,
-                                          itagType: ItagType, contentPlaybackNonce: String): ItagInfo {
+                                          itagType: ItagType, contentPlaybackNonce: String, poToken: String): ItagInfo {
         var streamUrl: String?
         if (formatData.has("url")) streamUrl = formatData.getString("url")
         else {
@@ -904,9 +914,6 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             streamUrl = cipher["url"] + "&" + cipher["sp"] + "=" + signature
         }
 
-        // Add the content playback nonce to the stream URL
-        streamUrl += "&$CPN=$contentPlaybackNonce"
-
         // Decode the n parameter if it is present
         // If it cannot be decoded, the stream cannot be used as streaming URLs return HTTP 403
         // responses if it has not the right value
@@ -914,6 +921,12 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         // YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated are so
         // propagated to the parent which ignores streams in this case
         streamUrl = getUrlWithThrottlingParameterDeobfuscated(videoId, streamUrl)
+
+        // Add the content playback nonce to the stream URL
+        streamUrl += "&" + CPN + "=" + contentPlaybackNonce
+
+        // Add the poToken, if there is one
+        if (poToken != null) streamUrl += "&pot=" + poToken
 
         val initRange: JsonObject = formatData.getObject("initRange")
         val indexRange: JsonObject = formatData.getObject("indexRange")
@@ -1126,6 +1139,12 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         }
 
     companion object {
+        private var poTokenProvider: PoTokenProvider? = null
+        private var fetchIosClient: Boolean = false
+        private const val PLAYER_CAPTIONS_TRACKLIST_RENDERER: String = "playerCaptionsTracklistRenderer"
+        private const val CAPTIONS: String = "captions"
+        private const val PLAYABILITY_STATUS: String = "playabilityStatus"
+
         @Throws(ParsingException::class)
         private fun parseLikeCountFromLikeButtonRenderer(topLevelButtons: JsonArray): Long {
             var likesString: String? = null
@@ -1200,20 +1219,23 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             try { return removeNonDigitCharacters(accessibilityText).toLong() } catch (e: NumberFormatException) { throw ParsingException("Could not parse \"$accessibilityText\" as a long", e) }
         }
 
-        private fun getManifestUrl(manifestType: String, streamingDataObjects: List<JsonObject?>): String {
+        private fun getManifestUrl(manifestType: String, streamingDataObjects: List<Pair<JsonObject, String>>, partToAppendToManifestUrlEnd: String): String {
             val manifestKey: String = manifestType + "ManifestUrl"
-            return streamingDataObjects.stream()
-                .filter { obj: JsonObject? -> Objects.nonNull(obj) }
-                .map { streamingDataObject: JsonObject? -> streamingDataObject!!.getString(manifestKey) }
-                .filter { obj: String? -> Objects.nonNull(obj) }
-                .findFirst()
-                .orElse("")
+            for (streamingDataObj in streamingDataObjects) {
+                if (streamingDataObj.first != null) {
+                    val manifestUrl: String? = streamingDataObj.first.getString(manifestKey)
+                    if (manifestUrl.isNullOrEmpty()) continue
+
+                    // If poToken is not null, add it to manifest URL
+                    return if (streamingDataObj.second == null) "$manifestUrl?$partToAppendToManifestUrlEnd" else "$manifestUrl?pot=${streamingDataObj.second}&$partToAppendToManifestUrlEnd"
+                }
+            }
+            return ""
         }
 
         private const val FORMATS: String = "formats"
         private const val ADAPTIVE_FORMATS: String = "adaptiveFormats"
         private const val STREAMING_DATA: String = "streamingData"
-        private const val PLAYER: String = "player"
         private const val NEXT: String = "next"
         private const val SIGNATURE_CIPHER: String = "signatureCipher"
         private const val CIPHER: String = "cipher"
@@ -1244,6 +1266,52 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
          */
         private fun isPlayerResponseNotValid(playerResponse: JsonObject, videoId: String): Boolean {
             return videoId != playerResponse.getObject("videoDetails").getString("videoId")
+        }
+
+        private fun isVideoAgeRestricted(playabilityStatus: JsonObject): Boolean {
+            // This is language dependent
+            return "login_required".equals(playabilityStatus.getString("status"), ignoreCase = true) && playabilityStatus.getString("reason", "").contains("age")
+        }
+
+
+        /**
+         * Set the [PoTokenProvider] instance to be used for fetching `poToken`s.
+         *
+         * This method allows setting an implementation of [PoTokenProvider] which will be used
+         * to obtain poTokens required for YouTube player requests and streaming URLs. These tokens
+         * are used by YouTube to verify the integrity of the user's device or browser and are required
+         * for playback with several clients.
+         *
+         * Without a [PoTokenProvider], the extractor makes its best effort to fetch as many
+         * streams as possible, but without `poToken`s, some formats may be not available or
+         * fetching may be slower due to additional requests done to get streams.
+         *
+         * Note that any provider change will be only applied on the next [.fetchPage] request.
+         *
+         * @param poTokenProvider the [PoTokenProvider] instance to set, which can be null to
+         * remove a provider already passed
+         * @see PoTokenProvider
+         */
+        @Suppress("unused")
+        fun setPoTokenProvider(poTokenProvider: PoTokenProvider?) {
+            YoutubeStreamExtractor.poTokenProvider = poTokenProvider
+        }
+
+        /**
+         * Set whether to fetch the iOS player responses.
+         *
+         * This method allows fetching the iOS player response, which can be useful in scenarios where
+         * streams from the iOS player response are needed, especially HLS manifests.
+         *
+         * Note that at the time of writing, YouTube is rolling out a `poToken` requirement on
+         * this client, formats from HLS manifests do not seem to be affected.
+         *
+         *
+         * @param fetchIosClient whether to fetch the iOS client
+         */
+        @Suppress("unused")
+        fun setFetchIosClient(fetchIosClient: Boolean) {
+            YoutubeStreamExtractor.fetchIosClient = fetchIosClient
         }
     }
 }

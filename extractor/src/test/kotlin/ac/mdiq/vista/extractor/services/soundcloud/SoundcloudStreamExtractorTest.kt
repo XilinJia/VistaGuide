@@ -17,6 +17,8 @@ import ac.mdiq.vista.extractor.stream.AudioStream
 import ac.mdiq.vista.extractor.stream.DeliveryMethod
 import ac.mdiq.vista.extractor.stream.StreamExtractor
 import ac.mdiq.vista.extractor.stream.StreamType
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.fail
 import java.util.function.Consumer
 
 object SoundcloudStreamExtractorTest {
@@ -129,8 +131,7 @@ object SoundcloudStreamExtractorTest {
 
         @Test
         @Disabled("Unreliable, sometimes it has related items, sometimes it does not")
-        @Throws(
-            Exception::class)
+        @Throws(Exception::class)
         override fun testRelatedItems() {
             super.testRelatedItems()
         }
@@ -146,13 +147,9 @@ object SoundcloudStreamExtractorTest {
             @BeforeAll
             @Throws(Exception::class)
             fun setUp() {
-                init(getInstance()!!)
+                init(getInstance())
                 extractor = SoundCloud.getStreamExtractor(URL)
-                try {
-                    extractor!!.fetchPage()
-                } catch (e: GeographicRestrictionException) {
-                    // expected
-                }
+                try { extractor!!.fetchPage() } catch (e: GeographicRestrictionException) {/* expected */ }
             }
         }
     }
@@ -285,14 +282,10 @@ object SoundcloudStreamExtractorTest {
 
             @BeforeAll
             @Throws(Exception::class)
-            fun setUp(): Unit {
-                init(getInstance()!!)
+            fun setUp() {
+                init(getInstance())
                 extractor = SoundCloud.getStreamExtractor(URL)
-                try {
-                    extractor!!.fetchPage()
-                } catch (e: SoundCloudGoPlusContentException) {
-                    // expected
-                }
+                try { extractor!!.fetchPage() } catch (e: SoundCloudGoPlusContentException) {/* expected */ }
             }
         }
     }
@@ -405,26 +398,32 @@ object SoundcloudStreamExtractorTest {
         override fun testAudioStreams() {
             super.testAudioStreams()
             val audioStreams = extractor!!.audioStreams
-            Assertions.assertEquals(2, audioStreams!!.size)
+            Assertions.assertEquals(3, audioStreams.size) // 2 MP3 streams (1 progressive, 1 HLS) and 1 OPUS
             audioStreams.forEach(Consumer { audioStream: AudioStream ->
                 val deliveryMethod = audioStream.deliveryMethod
                 val mediaUrl = audioStream.content
                 if (audioStream.format == MediaFormat.OPUS) {
-                    // Assert that it's an OPUS 64 kbps media URL with a single range which comes
-                    // from an HLS SoundCloud CDN
+                    assertSame(DeliveryMethod.HLS, deliveryMethod,
+                        "Wrong delivery method for stream " + audioStream.id + ": "
+                                + deliveryMethod)
+                    // Assert it's an OPUS 64 kbps media playlist URL which comes from an HLS
+                    // SoundCloud CDN
                     ExtractorAsserts.assertContains("-hls-opus-media.sndcdn.com", mediaUrl)
                     ExtractorAsserts.assertContains(".64.opus", mediaUrl)
-                    Assertions.assertSame(DeliveryMethod.HLS, deliveryMethod,
-                        ("Wrong delivery method for stream " + audioStream.id + ": "
-                                + deliveryMethod))
                 } else if (audioStream.format == MediaFormat.MP3) {
-                    // Assert that it's a MP3 128 kbps media URL which comes from a progressive
-                    // SoundCloud CDN
-                    ExtractorAsserts.assertContains("-media.sndcdn.com/bKOA7Pwbut93.128.mp3",
-                        mediaUrl)
-                    Assertions.assertSame(DeliveryMethod.PROGRESSIVE_HTTP, deliveryMethod,
-                        ("Wrong delivery method for stream " + audioStream.id + ": "
-                                + deliveryMethod))
+                    if (deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP) {
+                        // Assert it's a MP3 128 kbps media URL which comes from a progressive
+                        // SoundCloud CDN
+                        ExtractorAsserts.assertContains("-media.sndcdn.com/bKOA7Pwbut93.128.mp3",
+                            mediaUrl)
+                    } else if (deliveryMethod == DeliveryMethod.HLS) {
+                        // Assert it's a MP3 128 kbps media HLS playlist URL which comes from an HLS
+                        // SoundCloud CDN
+                        ExtractorAsserts.assertContains("-hls-media.sndcdn.com", mediaUrl)
+                        ExtractorAsserts.assertContains(".128.mp3", mediaUrl)
+                    } else {
+                        fail("Wrong delivery method for stream " + audioStream.id + ": " + deliveryMethod)
+                    }
                 }
             })
         }
@@ -437,11 +436,10 @@ object SoundcloudStreamExtractorTest {
             private const val URL = UPLOADER + "/" + ID + "#t=" + TIMESTAMP
             private var extractor: StreamExtractor? = null
 
-
             @BeforeAll
             @Throws(Exception::class)
             fun setUp(): Unit {
-                init(getInstance()!!)
+                init(getInstance())
                 extractor = SoundCloud.getStreamExtractor(URL)
                 extractor!!.fetchPage()
             }

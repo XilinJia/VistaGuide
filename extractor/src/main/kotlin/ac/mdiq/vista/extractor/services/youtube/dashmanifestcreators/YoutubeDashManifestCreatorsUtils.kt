@@ -6,12 +6,14 @@ import ac.mdiq.vista.extractor.downloader.Response
 import ac.mdiq.vista.extractor.exceptions.ExtractionException
 import ac.mdiq.vista.extractor.services.youtube.DeliveryType
 import ac.mdiq.vista.extractor.services.youtube.ItagItem
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.clientInfoHeaders
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getAndroidUserAgent
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getIosUserAgent
+import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getOriginReferrerHeaders
+import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.getTvHtml5UserAgent
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isAndroidStreamingUrl
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isIosStreamingUrl
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isTvHtml5SimplyEmbeddedPlayerStreamingUrl
+import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isTvHtml5StreamingUrl
+import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isWebEmbeddedPlayerStreamingUrl
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isWebStreamingUrl
 import ac.mdiq.vista.extractor.services.youtube.dashmanifestcreators.CreationException.Companion.couldNotAddElement
 import ac.mdiq.vista.extractor.stream.AudioTrackType
@@ -31,6 +33,7 @@ import javax.xml.transform.TransformerException
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
+
 
 /**
  * Utilities and constants for YouTube DASH manifest creators.
@@ -468,7 +471,8 @@ object YoutubeDashManifestCreatorsUtils {
     @Throws(CreationException::class)
     fun getInitializationResponse(baseStreamingUrl: String, itagItem: ItagItem, deliveryType: DeliveryType): Response {
         var baseStreamingUrl = baseStreamingUrl
-        val isHtml5StreamingUrl = (isWebStreamingUrl(baseStreamingUrl) || isTvHtml5SimplyEmbeddedPlayerStreamingUrl(baseStreamingUrl))
+        val isTvHtml5StreamingUrl = isTvHtml5StreamingUrl(baseStreamingUrl)
+        val isHtml5StreamingUrl = isWebStreamingUrl(baseStreamingUrl) || isTvHtml5StreamingUrl || isWebEmbeddedPlayerStreamingUrl(baseStreamingUrl)
         val isAndroidStreamingUrl = isAndroidStreamingUrl(baseStreamingUrl)
         val isIosStreamingUrl = isIosStreamingUrl(baseStreamingUrl)
         if (isHtml5StreamingUrl) baseStreamingUrl += ALR_YES
@@ -477,7 +481,7 @@ object YoutubeDashManifestCreatorsUtils {
         val downloader = downloader
         if (isHtml5StreamingUrl) {
             val mimeTypeExpected = itagItem.mediaFormat.mimeType
-            if (mimeTypeExpected.isNotEmpty()) return getStreamingWebUrlWithoutRedirects(downloader, baseStreamingUrl, mimeTypeExpected)
+            if (mimeTypeExpected.isNotEmpty()) return getStreamingWebUrlWithoutRedirects(downloader, baseStreamingUrl, mimeTypeExpected, isTvHtml5StreamingUrl)
         } else if (isAndroidStreamingUrl || isIosStreamingUrl) {
             try {
                 val headers = mapOf("User-Agent" to listOf(if (isAndroidStreamingUrl) getAndroidUserAgent(null) else getIosUserAgent(null)))
@@ -585,16 +589,18 @@ object YoutubeDashManifestCreatorsUtils {
      */
 
     @Throws(CreationException::class)
-    private fun getStreamingWebUrlWithoutRedirects(downloader: Downloader, streamingUrl: String, responseMimeTypeExpected: String): Response {
+    private fun getStreamingWebUrlWithoutRedirects(downloader: Downloader, streamingUrl: String, responseMimeTypeExpected: String, isTvHtml5StreamingUrl: Boolean): Response {
         var streamingUrl: String = streamingUrl
         try {
-            val headers: Map<String, List<String>> = clientInfoHeaders
+            val headers = HashMap(getOriginReferrerHeaders("https://www.youtube.com"))
+            if (isTvHtml5StreamingUrl) headers.put("User-Agent", listOf(getTvHtml5UserAgent()))
 
             var responseMimeType: String? = ""
 
             var redirectsCount = 0
             while (responseMimeType != responseMimeTypeExpected && redirectsCount < MAXIMUM_REDIRECT_COUNT) {
-                val response = downloader.get(streamingUrl, headers)
+                val html5Body = byteArrayOf(0x78, 0)
+                val response: Response = downloader.post(streamingUrl, headers, html5Body)
 
                 val responseCode = response.responseCode()
                 if (responseCode != 200) throw CreationException("Could not get the initialization URL: HTTP response code $responseCode")

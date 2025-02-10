@@ -2,6 +2,7 @@ package ac.mdiq.vista.extractor.utils
 
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.UncheckedIOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -9,11 +10,7 @@ import kotlin.experimental.or
 
 
 class ProtoBuilder {
-    var byteBuffer: ByteArrayOutputStream
-
-    init {
-        this.byteBuffer = ByteArrayOutputStream()
-    }
+    var byteBuffer: ByteArrayOutputStream = ByteArrayOutputStream()
 
     fun toBytes(): ByteArray {
         return byteBuffer.toByteArray()
@@ -32,14 +29,11 @@ class ProtoBuilder {
                 while (v != 0L) {
                     var b = (v and 0x7fL).toByte()
                     v = v shr 7
-
                     if (v != 0L) b = b or 0x80.toByte()
                     byteBuffer.write(byteArrayOf(b))
                 }
             }
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
+        } catch (e: IOException) { throw UncheckedIOException(e); }
     }
 
     private fun field(field: Int, wire: Byte) {
@@ -62,10 +56,6 @@ class ProtoBuilder {
     fun bytes(field: Int, bytes: ByteArray) {
         field(field, 2.toByte())
         writeVarint(bytes.size.toLong())
-        try {
-            byteBuffer.write(bytes)
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
+        try { byteBuffer.write(bytes) } catch (e: IOException) { throw UncheckedIOException(e) }
     }
 }

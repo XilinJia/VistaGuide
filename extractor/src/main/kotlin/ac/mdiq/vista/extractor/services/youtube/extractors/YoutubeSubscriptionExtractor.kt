@@ -1,18 +1,20 @@
 package ac.mdiq.vista.extractor.services.youtube.extractors
 
-import com.grack.nanojson.JsonArray
-import com.grack.nanojson.JsonObject
-import com.grack.nanojson.JsonParser
-import com.grack.nanojson.JsonParserException
 import ac.mdiq.vista.extractor.exceptions.ExtractionException
 import ac.mdiq.vista.extractor.services.youtube.YoutubeService
 import ac.mdiq.vista.extractor.subscription.SubscriptionExtractor
 import ac.mdiq.vista.extractor.subscription.SubscriptionItem
+import com.grack.nanojson.JsonArray
+import com.grack.nanojson.JsonObject
+import com.grack.nanojson.JsonParser
+import com.grack.nanojson.JsonParserException
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.io.UncheckedIOException
 import java.util.*
+import java.util.stream.Collectors
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
@@ -89,7 +91,7 @@ class YoutubeSubscriptionExtractor(youtubeService: YoutubeService)
     }
 
     @Throws(ExtractionException::class)
-    fun fromCsvInputStream(contentInputStream: InputStream): List<SubscriptionItem?> {
+    fun fromCsvInputStream(contentInputStream: InputStream): MutableList<SubscriptionItem?> {
         // Expected format of CSV file:
         // Channel Id,Channel Url,Channel Title
         //UC1JTQBa5QxZCpXrFSkMxmPw,http://www.youtube.com/channel/UC1JTQBa5QxZCpXrFSkMxmPw,Raycevick
@@ -100,55 +102,28 @@ class YoutubeSubscriptionExtractor(youtubeService: YoutubeService)
         //      The first line is always a header
         //      Header names are different based on the locale
         //      Fortunately the data is always the same order no matter what locale
-
-        var currentLine = 0
-        var line: String? = ""
-
         try {
-            BufferedReader(InputStreamReader(contentInputStream)).use { br ->
-                val subscriptionItems: MutableList<SubscriptionItem?> = ArrayList()
-                // ignore header and skip first line
-                currentLine = 1
-                line = br.readLine()
-
-                while ((br.readLine().also { line = it }) != null) {
-                    currentLine++
-
-                    // Exit early if we've read the first few lines and we haven't added any items
-                    // It's likely we're in the wrong file
-                    if (currentLine > 5 && subscriptionItems.size == 0) break
-
-                    // First comma
-                    val i1 = line!!.indexOf(",")
-                    if (i1 == -1) continue
-
-                    // Second comma
-                    val i2 = line!!.indexOf(",", i1 + 1)
-                    if (i2 == -1) continue
-
-                    // Third comma or line length
-                    var i3 = line!!.indexOf(",", i2 + 1)
-                    if (i3 == -1) i3 = line!!.length
-
-                    // Channel URL from second entry
-                    val channelUrl = line!!.substring(i1 + 1, i2).replace("http://", "https://")
-                    if (!channelUrl.startsWith(BASE_CHANNEL_URL)) continue
-
-                    // Channel title from third entry
-                    val channelTitle = line!!.substring(i2 + 1, i3)
-
-                    val newItem = SubscriptionItem(service.serviceId, channelUrl, channelTitle)
-                    subscriptionItems.add(newItem)
-                }
-                return subscriptionItems
+            BufferedReader(InputStreamReader(contentInputStream)).use { reader ->
+                return reader.lines()
+                    .skip(1) // ignore header and skip first line
+                    .map<Array<String?>?> { line: String? -> line!!.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() }
+                    .filter { values: Array<String?>? -> values!!.size >= 3 }
+                    .map<SubscriptionItem?> { values: Array<String?>? ->
+                        // Channel URL from second entry
+                        val channelUrl = values!![1]!!.replace("http://", "https://")
+                        if (channelUrl.startsWith(BASE_CHANNEL_URL))
+                            SubscriptionItem(
+                                service.serviceId,
+                                channelUrl,
+                                values[2]!!) // Channel title from third entry
+                        else
+                            null
+                    }
+                    .filter { obj: SubscriptionItem? -> Objects.nonNull(obj) }
+                    .collect(Collectors.toUnmodifiableList())
             }
-        } catch (e: IOException) {
-            when {
-                line == null -> line = "<null>"
-                line!!.length > 10 -> line = line!!.substring(0, 10) + "..."
-            }
-            throw InvalidSourceException("Error reading CSV file on line = \"$line\", line number = $currentLine", e)
-        }
+        } catch (e: UncheckedIOException) { throw InvalidSourceException("Error reading CSV file", e)
+        } catch (e: IOException) { throw InvalidSourceException("Error reading CSV file", e) }
     }
 
     companion object {

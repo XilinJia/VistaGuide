@@ -1,13 +1,9 @@
 package ac.mdiq.vista.extractor.services.soundcloud.extractors
 
-import com.grack.nanojson.JsonArray
-import com.grack.nanojson.JsonObject
-import com.grack.nanojson.JsonParser
-import com.grack.nanojson.JsonParserException
 import ac.mdiq.vista.extractor.Image
 import ac.mdiq.vista.extractor.MediaFormat
-import ac.mdiq.vista.extractor.Vista
 import ac.mdiq.vista.extractor.StreamingService
+import ac.mdiq.vista.extractor.Vista
 import ac.mdiq.vista.extractor.downloader.Downloader
 import ac.mdiq.vista.extractor.exceptions.*
 import ac.mdiq.vista.extractor.linkhandler.LinkHandler
@@ -17,6 +13,10 @@ import ac.mdiq.vista.extractor.services.soundcloud.SoundcloudParsingHelper.SOUND
 import ac.mdiq.vista.extractor.services.soundcloud.SoundcloudParsingHelper.clientId
 import ac.mdiq.vista.extractor.stream.*
 import ac.mdiq.vista.extractor.utils.Utils.encodeUrlUtf8
+import com.grack.nanojson.JsonArray
+import com.grack.nanojson.JsonObject
+import com.grack.nanojson.JsonParser
+import com.grack.nanojson.JsonParserException
 import java.io.IOException
 
 
@@ -39,7 +39,6 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
         }
     }
 
-
     override val id: String
         get() = track!!.getInt("id").toString()
 
@@ -47,7 +46,6 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
     override fun getName(): String {
         return track!!.getString("title")
     }
-
 
     override val textualUploadDate: String
         get() = track!!.getString("created_at")
@@ -105,51 +103,30 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
             // Streams can be streamable and downloadable - or explicitly not.
             // For playing the track, it is only necessary to have a streamable track.
             // If this is not the case, this track might not be published yet.
-            if (!track!!.getBoolean("streamable") || !isAvailable) return audioStreams
+            if (track?.getBoolean("streamable") != true || !isAvailable) return audioStreams
 
             try {
-                val transcodings = track!!.getObject("media").getArray("transcodings")
+                val transcodings = track?.getObject("media")?.getArray("transcodings")
                 // Get information about what stream formats are available
-                if (!transcodings.isNullOrEmpty()) extractAudioStreams(transcodings, checkMp3ProgressivePresence(transcodings), audioStreams)
-                extractDownloadableFileIfAvailable(audioStreams)
-            } catch (e: NullPointerException) {
-                throw ExtractionException("Could not get audio streams", e)
-            }
+                if (!transcodings.isNullOrEmpty()) extractAudioStreams(transcodings, audioStreams)
+            } catch (e: NullPointerException) { throw ExtractionException("Could not get audio streams", e) }
             return audioStreams
         }
 
 
     @Throws(IOException::class, ExtractionException::class)
     private fun getTranscodingUrl(endpointUrl: String): String {
-        val apiStreamUrl = endpointUrl + "?client_id=" + clientId()
+        var apiStreamUrl = endpointUrl + "?client_id=" + clientId()
+        val trackAuthorization = track!!.getString("track_authorization")
+        if (!trackAuthorization.isNullOrEmpty()) apiStreamUrl += "&track_authorization=$trackAuthorization"
         val response = Vista.downloader.get(apiStreamUrl).responseBody()
         val urlObject: JsonObject
-        try {
-            urlObject = JsonParser.`object`().from(response)
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse streamable URL", e)
-        }
+        try { urlObject = JsonParser.`object`().from(response) } catch (e: JsonParserException) { throw ParsingException("Could not parse streamable URL", e) }
 
         return urlObject.getString("url")
     }
 
-    @Throws(IOException::class, ExtractionException::class)
-    private fun getDownloadUrl(trackId: String): String? {
-        val response = Vista.downloader.get(SOUNDCLOUD_API_V2_URL + "tracks/"
-                + trackId + "/download" + "?client_id=" + clientId()).responseBody()
-
-        val downloadJsonObject: JsonObject
-        try {
-            downloadJsonObject = JsonParser.`object`().from(response)
-        } catch (e: JsonParserException) {
-            throw ParsingException("Could not parse download URL", e)
-        }
-        val redirectUri = downloadJsonObject.getString("redirectUri")
-        if (!redirectUri.isNullOrEmpty()) return redirectUri
-        return null
-    }
-
-    private fun extractAudioStreams(transcodings: JsonArray, mp3ProgressiveInStreams: Boolean, audioStreams: MutableList<AudioStream>) {
+    private fun extractAudioStreams(transcodings: JsonArray, audioStreams: MutableList<AudioStream>) {
         transcodings.stream()
             .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
             .map { obj: Any? -> JsonObject::class.java.cast(obj) }
@@ -159,18 +136,20 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
                 try {
                     val preset = transcoding.getString("preset", Stream.ID_UNKNOWN)
                     val protocol = transcoding.getObject("format").getString("protocol")
+                    if (protocol.contains("encrypted")) {
+                        // Skip DRM-protected streams, which have encrypted in their protocol
+                        // name
+                        return@forEachOrdered
+                    }
+
                     val builder = AudioStream.Builder().setId(preset)
 
-                    val isHls = protocol == "hls"
-                    if (isHls) builder.setDeliveryMethod(DeliveryMethod.HLS)
+                    if (protocol.equals("hls")) builder.setDeliveryMethod(DeliveryMethod.HLS)
 
                     builder.setContent(getTranscodingUrl(url), true)
 
                     when {
                         preset.contains("mp3") -> {
-                            // Don't add the MP3 HLS stream if there is a progressive stream
-                            // present because both have the same bitrate
-                            if (mp3ProgressiveInStreams && isHls) return@forEachOrdered
                             builder.setMediaFormat(MediaFormat.MP3)
                             builder.setAverageBitrate(128)
                         }
@@ -191,33 +170,6 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
                     // skip to the next one
                 } catch (ignored: IOException) { }
             }
-    }
-
-    /**
-     * Add the downloadable format if it is available.
-     * A track can have the `downloadable` boolean set to `true`, but it doesn't mean we can download it.
-     *
-     * If the value of the `has_download_left` boolean is `true`, the track can be
-     * downloaded, and not otherwise.
-     *
-     * @param audioStreams the audio streams to which the downloadable file is added
-     */
-    fun extractDownloadableFileIfAvailable(audioStreams: MutableList<AudioStream>) {
-        if (track!!.getBoolean("downloadable") && track!!.getBoolean("has_downloads_left")) {
-            try {
-                val downloadUrl = getDownloadUrl(id)
-                if (!downloadUrl.isNullOrEmpty()) {
-                    audioStreams.add(AudioStream.Builder()
-                        .setId("original-format")
-                        .setContent(downloadUrl, true)
-                        .setAverageBitrate(AudioStream.UNKNOWN_BITRATE)
-                        .build())
-                }
-            } catch (ignored: Exception) {
-                // If something went wrong when trying to get the download URL, ignore the
-                // exception throw because this "stream" is not necessary to play the track
-            }
-        }
     }
 
     override val videoStreams: List<VideoStream>
@@ -272,17 +224,4 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
             }
             return tags
         }
-
-    companion object {
-        private fun checkMp3ProgressivePresence(transcodings: JsonArray): Boolean {
-            return transcodings.stream()
-                .filter { o: Any? -> JsonObject::class.java.isInstance(o) }
-                .map { obj: Any? -> JsonObject::class.java.cast(obj) }
-                .anyMatch { transcodingJsonObject: JsonObject ->
-                    transcodingJsonObject.getString("preset")
-                        .contains("mp3") && transcodingJsonObject.getObject("format")
-                        .getString("protocol") == "progressive"
-                }
-        }
-    }
 }

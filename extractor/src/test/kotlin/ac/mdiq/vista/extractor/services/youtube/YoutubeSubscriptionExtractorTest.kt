@@ -28,10 +28,10 @@ class YoutubeSubscriptionExtractorTest {
 
         for (item in subscriptionItems) {
             if (item == null) continue
-            Assertions.assertNotNull(item?.name)
-            Assertions.assertNotNull(item?.url)
-            Assertions.assertTrue(urlHandler!!.acceptUrl(item!!.url))
-            Assertions.assertEquals(ServiceList.YouTube.serviceId, item?.serviceId)
+            Assertions.assertNotNull(item.name)
+            Assertions.assertNotNull(item.url)
+            Assertions.assertTrue(urlHandler!!.acceptUrl(item.url))
+            Assertions.assertEquals(ServiceList.YouTube.serviceId, item.serviceId)
         }
     }
 

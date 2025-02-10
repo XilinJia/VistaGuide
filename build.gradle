@@ -5,7 +5,7 @@ allprojects {
     compileJava.options.encoding = 'UTF-8'
     compileTestJava.options.encoding = 'UTF-8'
 
-    version 'lv0.24.4.0'
+    version 'lv0.24.5.0'
     group 'com.github.XilinJia'
 
     repositories {
@@ -25,7 +25,7 @@ allprojects {
 
     ext {
         nanojsonVersion = "1d9e1aea9049fc9f85e68b43ba39fe7be1c1f751"
-        junitVersion = "5.11.0"
+        junitVersion = "5.11.4"
     }
 }
 
