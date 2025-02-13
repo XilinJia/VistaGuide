@@ -31,11 +31,12 @@ import ac.mdiq.vista.extractor.localization.Localization
  */
 object Vista {
 
+    var isDebugging: Boolean = false
+
     lateinit var downloader: Downloader
         private set
     private var preferredLocalization: Localization? = null
     private var preferredContentCountry: ContentCountry? = null
-
 
     val services: List<StreamingService>
         get() = ServiceList.all()
@@ -48,6 +49,9 @@ object Vista {
         preferredContentCountry = c
     }
 
+    fun Logd(m: String) {
+        if (isDebugging) println(m)
+    }
 
     @Throws(ExtractionException::class)
     fun getService(serviceId: Int): StreamingService {
@@ -65,12 +69,9 @@ object Vista {
             .orElseThrow { ExtractionException("There's no service with the name = \"$serviceName\"") }
     }
 
-
     @Throws(ExtractionException::class)
     fun getServiceByUrl(url: String): StreamingService {
-        for (service in ServiceList.all()) {
-            if (service.getLinkTypeByUrl(url) != StreamingService.LinkType.NONE) return service
-        }
+        for (service in ServiceList.all()) if (service.getLinkTypeByUrl(url) != StreamingService.LinkType.NONE) return service
         throw ExtractionException("No service can handle the url = \"$url\"")
     }
 
@@ -81,8 +82,6 @@ object Vista {
             ?: if (thePreferredLocalization.getCountryCode().isEmpty()) ContentCountry.DEFAULT else ContentCountry(thePreferredLocalization.getCountryCode())
     }
 
-
-
     fun getPreferredLocalization(): Localization {
         return if (preferredLocalization == null) Localization.DEFAULT else preferredLocalization!!
     }
@@ -90,8 +89,6 @@ object Vista {
     fun setPreferredLocalization(preferredLocalization: Localization?) {
         Vista.preferredLocalization = preferredLocalization
     }
-
-
 
     fun getPreferredContentCountry(): ContentCountry {
         return if (preferredContentCountry == null) ContentCountry.DEFAULT else preferredContentCountry!!

@@ -106,18 +106,13 @@ class YoutubeSubscriptionExtractor(youtubeService: YoutubeService)
             BufferedReader(InputStreamReader(contentInputStream)).use { reader ->
                 return reader.lines()
                     .skip(1) // ignore header and skip first line
-                    .map<Array<String?>?> { line: String? -> line!!.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() }
-                    .filter { values: Array<String?>? -> values!!.size >= 3 }
-                    .map<SubscriptionItem?> { values: Array<String?>? ->
+                    .map<Array<String?>> { line: String? -> line?.split(",".toRegex())?.dropLastWhile { it.isEmpty() }?.toTypedArray() }
+                    .filter { values: Array<String?> -> values.size >= 3 }
+                    .map<SubscriptionItem?> { values: Array<String?> ->
                         // Channel URL from second entry
-                        val channelUrl = values!![1]!!.replace("http://", "https://")
-                        if (channelUrl.startsWith(BASE_CHANNEL_URL))
-                            SubscriptionItem(
-                                service.serviceId,
-                                channelUrl,
-                                values[2]!!) // Channel title from third entry
-                        else
-                            null
+                        val channelUrl = values[1]?.replace("http://", "https://")
+                        // Channel title from third entry
+                        if (channelUrl?.startsWith(BASE_CHANNEL_URL) == true) SubscriptionItem(service.serviceId, channelUrl, values[2]!!) else null
                     }
                     .filter { obj: SubscriptionItem? -> Objects.nonNull(obj) }
                     .collect(Collectors.toUnmodifiableList())

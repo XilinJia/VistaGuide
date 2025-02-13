@@ -73,11 +73,7 @@ abstract class Downloader {
     @JvmOverloads
     @Throws(IOException::class, ReCaptchaException::class)
     fun post(url: String, headers: Map<String, List<String>>?, dataToSend: ByteArray?, localization: Localization? = getPreferredLocalization()): Response {
-        return execute(newBuilder()
-            .post(url, dataToSend)
-            .headers(headers)
-            .localization(localization)
-            .build())
+        return execute(newBuilder().post(url, dataToSend).headers(headers).localization(localization).build())
     }
 
     /**

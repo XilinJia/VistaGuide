@@ -1,7 +1,6 @@
 package ac.mdiq.vista.extractor.downloader
 
 
-
 /**
  * A Data class used to hold the results from requests made by the Downloader implementation.
  */

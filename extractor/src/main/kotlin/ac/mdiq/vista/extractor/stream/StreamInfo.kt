@@ -21,6 +21,7 @@
 package ac.mdiq.vista.extractor.stream
 
 import ac.mdiq.vista.extractor.*
+import ac.mdiq.vista.extractor.Vista.Logd
 import ac.mdiq.vista.extractor.Vista.getServiceByUrl
 import ac.mdiq.vista.extractor.exceptions.ContentNotAvailableException
 import ac.mdiq.vista.extractor.exceptions.ContentNotSupportedException
@@ -39,15 +40,10 @@ class StreamInfo(
         serviceId: Int,
         url: String,
         originalUrl: String,
-        /**
-         * Get the stream type
-         * @return the stream type
-         */
         var streamType: StreamType,
         id: String,
         name: String,
-        var ageLimit: Int)
-    : Info(serviceId, id, url, originalUrl, name) {
+        var ageLimit: Int) : Info(serviceId, id, url, originalUrl, name) {
 
     /**
      * Get the thumbnail url
@@ -147,8 +143,11 @@ class StreamInfo(
             val streamInfo: StreamInfo
             try {
                 streamInfo = extractImportantData(extractor)
+                Logd("StreamInfo getInfo after extractImportantData")
                 extractStreams(streamInfo, extractor)
+                Logd("StreamInfo getInfo after extractStreams")
                 extractOptionalData(streamInfo, extractor)
+                Logd("StreamInfo getInfo after extractOptionalData")
                 return streamInfo
             } catch (e: ExtractionException) {
                 // Currently, YouTube does not distinguish between age restricted videos and videos
@@ -157,7 +156,7 @@ class StreamInfo(
                 // by country.
                 //
                 // We will now detect whether the video is blocked by country or not.
-
+                Logd("StreamInfo getInfo error: ${e.message}")
                 val errorMessage = extractor.errorMessage
                 if (errorMessage.isNullOrEmpty()) throw e
                 else throw ContentNotAvailableException(errorMessage, e)
@@ -168,12 +167,14 @@ class StreamInfo(
         private fun extractImportantData(extractor: StreamExtractor): StreamInfo {
             // Important data, without it the content can't be displayed.
             // If one of these is not available, the frontend will receive an exception directly.
+            Logd("StreamInfo extractImportantData ${extractor.url}")
 
             val url = extractor.url
             val streamType = extractor.streamType
             val id = extractor.id
             val name = extractor.getName()
             val ageLimit = extractor.ageLimit
+            Logd("StreamInfo extractImportantData $streamType [$id] [$name] [$ageLimit]")
 
             // Suppress always-non-null warning as here we double-check it really is not null
             if ((streamType == StreamType.NONE || url.isEmpty() || id.isEmpty()) || name.isEmpty() || ageLimit == -1)
@@ -187,16 +188,23 @@ class StreamInfo(
             // At least one type of stream has to be available, otherwise an exception will be thrown
             // directly into the frontend.
 
+            Logd("StreamInfo extractStreams dashMpdUrl ")
             try { streamInfo.dashMpdUrl = extractor.dashMpdUrl } catch (e: Exception) { streamInfo.addError(ExtractionException("Couldn't get DASH manifest", e)) }
 
+            Logd("StreamInfo extractStreams hlsUrl ")
             try { streamInfo.hlsUrl = extractor.hlsUrl } catch (e: Exception) { streamInfo.addError(ExtractionException("Couldn't get HLS manifest", e)) }
 
+            Logd("StreamInfo extractStreams audioStreams ")
             try { streamInfo.audioStreams = extractor.audioStreams } catch (e: ContentNotSupportedException) { throw e } catch (e: Exception) { streamInfo.addError(ExtractionException("Couldn't get audio streams", e)) }
 
+            Logd("StreamInfo extractStreams videoStreams ")
             try { streamInfo.videoStreams = extractor.videoStreams } catch (e: Exception) { streamInfo.addError(ExtractionException("Couldn't get video streams", e)) }
 
+            Logd("StreamInfo extractStreams videoOnlyStreams ")
             try { streamInfo.videoOnlyStreams = extractor.videoOnlyStreams } catch (e: Exception) { streamInfo.addError(ExtractionException("Couldn't get video only streams", e)) }
 
+            Logd("StreamInfo extractStreams audioStreams: ${streamInfo.audioStreams.size} ")
+            Logd("StreamInfo extractStreams videoStreams: ${streamInfo.videoStreams.size} ")
             // Either audio or video has to be available, otherwise we didn't get a stream (since
             // videoOnly are optional, they don't count).
             if ((streamInfo.videoStreams.isEmpty()) && (streamInfo.audioStreams.isEmpty()))

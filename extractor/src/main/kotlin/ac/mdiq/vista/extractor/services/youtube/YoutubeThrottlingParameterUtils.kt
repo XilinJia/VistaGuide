@@ -126,11 +126,8 @@ internal object YoutubeThrottlingParameterUtils {
     @Throws(ParsingException::class)
     fun getDeobfuscationFunctionName(javaScriptPlayerCode: String): String {
         val matcher: Matcher
-        try {
-            matcher = matchMultiplePatterns(DEOBFUSCATION_FUNCTION_NAME_REGEXES, javaScriptPlayerCode)
-        } catch (e: RegexException) {
-            throw ParsingException("Could not find deobfuscation function with any of the " + "known patterns in the base JavaScript player code", e)
-        }
+        try { matcher = matchMultiplePatterns(DEOBFUSCATION_FUNCTION_NAME_REGEXES, javaScriptPlayerCode)
+        } catch (e: RegexException) { throw ParsingException("Could not find deobfuscation function with any of the " + "known patterns in the base JavaScript player code", e) }
 
         val functionName = matcher.group(1)
         if (matcher.groupCount() == 1) return functionName
@@ -218,9 +215,7 @@ internal object YoutubeThrottlingParameterUtils {
     @Throws(RegexException::class)
     private fun fixupFunction(function: String): String {
         val firstArgName: String? = matchGroup1(FUNCTION_ARGUMENTS_REGEX, function).split(",")[0].trim()
-        val earlyReturnPattern = Pattern.compile(
-            EARLY_RETURN_REGEX + firstArgName + ";",
-            Pattern.DOTALL)
+        val earlyReturnPattern = Pattern.compile(EARLY_RETURN_REGEX + firstArgName + ";", Pattern.DOTALL)
         val earlyReturnCodeMatcher = earlyReturnPattern.matcher(function)
         return earlyReturnCodeMatcher.replaceFirst(";")
     }

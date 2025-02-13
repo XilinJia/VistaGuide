@@ -49,7 +49,7 @@ class BandcampChannelExtractor(service: StreamingService, linkHandler: ListLinkH
 
             return Stream.of(Jsoup.parse(html).getElementById("customHeader"))
                 .filter { obj: Element? -> Objects.nonNull(obj) }
-                .flatMap { element: Element -> element.getElementsByTag("img").stream() }
+                .flatMap { element: Element? -> element?.getElementsByTag("img")?.stream() }
                 .map { element: Element -> element.attr("src") }
                 .filter { url: String -> url.isNotEmpty() }
                 .map { url: String ->

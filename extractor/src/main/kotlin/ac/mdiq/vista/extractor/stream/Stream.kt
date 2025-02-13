@@ -100,9 +100,7 @@ abstract class Stream (
          */
         fun containSimilarStream(stream: Stream, streamList: List<Stream?>): Boolean {
             if (streamList.isEmpty()) return false
-            for (cmpStream in streamList) {
-                if (stream.equalStats(cmpStream)) return true
-            }
+            for (cmpStream in streamList) if (stream.equalStats(cmpStream)) return true
             return false
         }
     }

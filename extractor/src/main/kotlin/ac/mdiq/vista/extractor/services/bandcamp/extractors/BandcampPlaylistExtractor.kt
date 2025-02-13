@@ -42,28 +42,18 @@ class BandcampPlaylistExtractor(service: StreamingService, linkHandler: ListLink
         albumJson = BandcampStreamExtractor.getAlbumInfoJson(html)
         trackInfo = albumJson?.getArray("trackinfo")
 
-        try {
-            name = getJsonData(html, "data-embed").getString("album_title")
-        } catch (e: JsonParserException) {
-            throw ParsingException("Faulty JSON; page likely does not contain album data", e)
-        } catch (e: ArrayIndexOutOfBoundsException) {
-            throw ParsingException("JSON does not exist", e)
-        }
+        try { name = getJsonData(html, "data-embed").getString("album_title")
+        } catch (e: JsonParserException) { throw ParsingException("Faulty JSON; page likely does not contain album data", e)
+        } catch (e: ArrayIndexOutOfBoundsException) { throw ParsingException("JSON does not exist", e) }
 
-        if (trackInfo == null|| trackInfo!!.isEmpty()) {
-            // Albums without trackInfo need to be purchased before they can be played
-            throw PaidContentException("Album needs to be purchased")
-        }
+        // Albums without trackInfo need to be purchased before they can be played
+        if (trackInfo == null|| trackInfo!!.isEmpty()) throw PaidContentException("Album needs to be purchased")
     }
 
     @get:Throws(ParsingException::class)
 
     override val thumbnails: List<Image>
-        get() = if (albumJson!!.isNull("art_id")) {
-            listOf()
-        } else {
-            getImagesFromImageId(albumJson!!.getLong("art_id"), true)
-        }
+        get() = if (albumJson!!.isNull("art_id")) listOf() else getImagesFromImageId(albumJson!!.getLong("art_id"), true)
 
     @get:Throws(ParsingException::class)
     override val uploaderUrl: String
@@ -75,7 +65,6 @@ class BandcampPlaylistExtractor(service: StreamingService, linkHandler: ListLink
 
     override val uploaderName: String
         get() = albumJson!!.getString("artist")
-
 
     override val uploaderAvatars: List<Image>
         get() = getImagesFromImageUrl(document!!.getElementsByClass("band-photo")
@@ -95,24 +84,15 @@ class BandcampPlaylistExtractor(service: StreamingService, linkHandler: ListLink
 
     override val description: Description
         get() {
-            val tInfo = document!!.getElementById("trackInfo")
-                ?: throw ParsingException("Could not find trackInfo in document")
+            val tInfo = document!!.getElementById("trackInfo") ?: throw ParsingException("Could not find trackInfo in document")
             val about = tInfo.getElementsByClass("tralbum-about")
             val credits = tInfo.getElementsByClass("tralbum-credits")
             val license = document!!.getElementById("license")
-            if (about.isEmpty() && credits.isEmpty() && license == null) {
-                return Description.EMPTY_DESCRIPTION
-            }
+            if (about.isEmpty() && credits.isEmpty() && license == null) return Description.EMPTY_DESCRIPTION
             val sb = StringBuilder()
-            if (!about.isEmpty()) {
-                sb.append(Objects.requireNonNull(about.first()).html())
-            }
-            if (!credits.isEmpty()) {
-                sb.append(Objects.requireNonNull(credits.first()).html())
-            }
-            if (license != null) {
-                sb.append(license.html())
-            }
+            if (!about.isEmpty()) sb.append(Objects.requireNonNull(about.first())?.html())
+            if (!credits.isEmpty()) sb.append(Objects.requireNonNull(credits.first())?.html())
+            if (license != null) sb.append(license.html())
             return Description(sb.toString(), Description.HTML)
         }
 
@@ -127,12 +107,10 @@ class BandcampPlaylistExtractor(service: StreamingService, linkHandler: ListLink
 
                 if (trackInfo!!.size < MAXIMUM_INDIVIDUAL_COVER_ARTS) {
                     // Load cover art of every track individually
-                    collector.commit(BandcampPlaylistStreamInfoItemExtractor(
-                        track, uploaderUrl, service))
+                    collector.commit(BandcampPlaylistStreamInfoItemExtractor(track, uploaderUrl, service))
                 } else {
                     // Pretend every track has the same cover art as the album
-                    collector.commit(BandcampPlaylistStreamInfoItemExtractor(
-                        track, uploaderUrl, thumbnails))
+                    collector.commit(BandcampPlaylistStreamInfoItemExtractor(track, uploaderUrl, thumbnails))
                 }
             }
 

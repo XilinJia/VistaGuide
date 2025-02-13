@@ -136,16 +136,11 @@ class SoundcloudStreamExtractor(service: StreamingService, linkHandler: LinkHand
                 try {
                     val preset = transcoding.getString("preset", Stream.ID_UNKNOWN)
                     val protocol = transcoding.getObject("format").getString("protocol")
-                    if (protocol.contains("encrypted")) {
-                        // Skip DRM-protected streams, which have encrypted in their protocol
-                        // name
-                        return@forEachOrdered
-                    }
+                    // Skip DRM-protected streams, which have encrypted in their protocol name
+                    if (protocol.contains("encrypted")) return@forEachOrdered
 
                     val builder = AudioStream.Builder().setId(preset)
-
-                    if (protocol.equals("hls")) builder.setDeliveryMethod(DeliveryMethod.HLS)
-
+                    if (protocol == "hls") builder.setDeliveryMethod(DeliveryMethod.HLS)
                     builder.setContent(getTranscodingUrl(url), true)
 
                     when {

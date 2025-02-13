@@ -53,7 +53,7 @@ interface PoTokenProvider {
      *
      * @return a [PoTokenResult] specific to the WEB InnerTube client
      */
-    fun getWebClientPoToken(videoId: String?): PoTokenResult?
+    fun getWebClientPoToken(videoId: String): PoTokenResult?
 
     /**
      * Get a [PoTokenResult] specific to the web embeds, a.k.a. the WEB_EMBEDDED_PLAYER
@@ -75,7 +75,7 @@ interface PoTokenProvider {
      *
      * @return a [PoTokenResult] specific to the WEB_EMBEDDED_PLAYER InnerTube client
      */
-    fun getWebEmbedClientPoToken(videoId: String?): PoTokenResult?
+    fun getWebEmbedClientPoToken(videoId: String): PoTokenResult?
 
     /**
      * Get a [PoTokenResult] specific to the Android app, a.k.a. the ANDROID InnerTube client.
@@ -103,7 +103,7 @@ interface PoTokenProvider {
      *
      * @return a [PoTokenResult] specific to the ANDROID InnerTube client
      */
-    fun getAndroidClientPoToken(videoId: String?): PoTokenResult?
+    fun getAndroidClientPoToken(videoId: String): PoTokenResult?
 
     /**
      * Get a [PoTokenResult] specific to the iOS app, a.k.a. the IOS InnerTube client.
@@ -124,5 +124,5 @@ interface PoTokenProvider {
      *
      * @return a [PoTokenResult] specific to the IOS InnerTube client
      */
-    fun getIosClientPoToken(videoId: String?): PoTokenResult?
+    fun getIosClientPoToken(videoId: String): PoTokenResult?
 }

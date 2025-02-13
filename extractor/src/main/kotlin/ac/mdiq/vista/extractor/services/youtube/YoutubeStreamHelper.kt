@@ -58,11 +58,9 @@ object YoutubeStreamHelper {
 
         val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
 
-        val url: String = (YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
-                + "&\$fields=microformat,playabilityStatus,storyboards,videoDetails")
+        val url: String = (YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER + "&\$fields=microformat,playabilityStatus,storyboards,videoDetails")
 
-        return toJsonObject(getValidJsonResponseBody(
-            downloader.postWithContentTypeJson(url, headers, body, localization)))
+        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
     }
 
     @Throws(IOException::class, ExtractionException::class)
@@ -80,8 +78,7 @@ object YoutubeStreamHelper {
         innertubeClientRequestInfo.clientInfo.visitorData =
             getVisitorDataFromInnertube(innertubeClientRequestInfo, localization, contentCountry, headers, YOUTUBEI_V1_URL, null, true)
 
-        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry,
-            innertubeClientRequestInfo, null)
+        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, null)
 
         addVideoIdCpnAndOkChecks(builder, videoId, cpn)
 
@@ -91,20 +88,17 @@ object YoutubeStreamHelper {
 
         val url: String = YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
 
-        return toJsonObject(getValidJsonResponseBody(
-            downloader.postWithContentTypeJson(url, headers, body, localization)))
+        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
     }
 
     @Throws(IOException::class, ExtractionException::class)
     fun getWebFullPlayerResponse(localization: Localization, contentCountry: ContentCountry,
             videoId: String, cpn: String, webPoTokenResult: PoTokenResult, signatureTimestamp: Int): JsonObject {
-        val innertubeClientRequestInfo =
-            InnertubeClientRequestInfo.ofWebClient()
+        val innertubeClientRequestInfo = InnertubeClientRequestInfo.ofWebClient()
         innertubeClientRequestInfo.clientInfo.clientVersion = getClientVersion()
         innertubeClientRequestInfo.clientInfo.visitorData = webPoTokenResult.visitorData
 
-        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry,
-            innertubeClientRequestInfo, null)
+        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, null)
 
         addVideoIdCpnAndOkChecks(builder, videoId, cpn)
 
@@ -116,15 +110,13 @@ object YoutubeStreamHelper {
 
         val url: String = YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
 
-        return toJsonObject(getValidJsonResponseBody(
-            downloader.postWithContentTypeJson(url, youTubeHeaders, body, localization)))
+        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, youTubeHeaders, body, localization)))
     }
 
     @Throws(IOException::class, ExtractionException::class)
     fun getWebEmbeddedPlayerResponse(localization: Localization, contentCountry: ContentCountry,
             videoId: String, cpn: String, webEmbeddedPoTokenResult: PoTokenResult?, signatureTimestamp: Int): JsonObject {
-        val innertubeClientRequestInfo =
-            InnertubeClientRequestInfo.ofWebEmbeddedPlayerClient()
+        val innertubeClientRequestInfo = InnertubeClientRequestInfo.ofWebEmbeddedPlayerClient()
 
         val headers: MutableMap<String, List<String>> = getClientHeaders(WEB_EMBEDDED_CLIENT_ID, WEB_EMBEDDED_CLIENT_VERSION).toMutableMap()
         headers.putAll(getOriginReferrerHeaders("https://www.youtube.com"))
@@ -136,36 +128,29 @@ object YoutubeStreamHelper {
         innertubeClientRequestInfo.clientInfo.visitorData = webEmbeddedPoTokenResult?.visitorData ?: getVisitorDataFromInnertube(innertubeClientRequestInfo,
             localization, contentCountry, headers, YOUTUBEI_V1_URL, embedUrl, false)
 
-        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry,
-            innertubeClientRequestInfo, embedUrl)
+        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, embedUrl)
 
         addVideoIdCpnAndOkChecks(builder, videoId, cpn)
 
         addPlaybackContext(builder, embedUrl, signatureTimestamp)
 
-        if (webEmbeddedPoTokenResult != null) {
-            addPoToken(builder, webEmbeddedPoTokenResult.playerRequestPoToken)
-        }
+        if (webEmbeddedPoTokenResult != null) addPoToken(builder, webEmbeddedPoTokenResult.playerRequestPoToken)
 
         val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
         val url: String = YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
 
-        return toJsonObject(getValidJsonResponseBody(
-            downloader.postWithContentTypeJson(url, headers, body, localization)))
+        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
     }
 
     @Throws(IOException::class, ExtractionException::class)
     fun getAndroidPlayerResponse(contentCountry: ContentCountry, localization: Localization,
                                  videoId: String, cpn: String, androidPoTokenResult: PoTokenResult): JsonObject {
-        val innertubeClientRequestInfo =
-            InnertubeClientRequestInfo.ofAndroidClient()
+        val innertubeClientRequestInfo = InnertubeClientRequestInfo.ofAndroidClient()
         innertubeClientRequestInfo.clientInfo.visitorData = androidPoTokenResult.visitorData
 
-        val headers =
-            getMobileClientHeaders(getAndroidUserAgent(localization))
+        val headers = getMobileClientHeaders(getAndroidUserAgent(localization))
 
-        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry,
-            innertubeClientRequestInfo, null)
+        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, null)
 
         addVideoIdCpnAndOkChecks(builder, videoId, cpn)
 
@@ -173,11 +158,9 @@ object YoutubeStreamHelper {
 
         val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
 
-        val url = (YOUTUBEI_V1_GAPIS_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
-                + "&t=" + generateTParameter() + "&id=" + videoId)
+        val url = (YOUTUBEI_V1_GAPIS_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER + "&t=" + generateTParameter() + "&id=" + videoId)
 
-        return toJsonObject(getValidJsonResponseBody(
-            downloader.postWithContentTypeJson(url, headers, body, localization)))
+        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
     }
 
     @Throws(IOException::class, ExtractionException::class)
@@ -209,8 +192,7 @@ object YoutubeStreamHelper {
     @Throws(IOException::class, ExtractionException::class)
     fun getIosPlayerResponse(contentCountry: ContentCountry, localization: Localization,
                              videoId: String, cpn: String, iosPoTokenResult: PoTokenResult?): JsonObject {
-        val innertubeClientRequestInfo =
-            InnertubeClientRequestInfo.ofIosClient()
+        val innertubeClientRequestInfo = InnertubeClientRequestInfo.ofIosClient()
 
         val headers = getMobileClientHeaders(getIosUserAgent(localization))
 

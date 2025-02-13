@@ -176,7 +176,7 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
         val timeAgoParser = timeAgoParser
         for (content in contents) {
             val item = content as JsonObject
-//            println("YoutubeSearchExtractor collectStreamsFrom $extractVideoResults $extractChannelResults $extractPlaylistResults item: ${item}")
+//            Logd("YoutubeSearchExtractor collectStreamsFrom $extractVideoResults $extractChannelResults $extractPlaylistResults item: ${item}")
             when {
                 item.has("backgroundPromoRenderer") -> throw NothingFoundException(getTextFromObject(item.getObject("backgroundPromoRenderer").getObject("bodyText")))
                 extractVideoResults && item.has("videoRenderer") -> collector.commit(YoutubeStreamInfoItemExtractor(item.getObject("videoRenderer"), timeAgoParser))
@@ -194,7 +194,7 @@ class YoutubeSearchExtractor(service: StreamingService, linkHandler: SearchQuery
                 }
 
             }
-//            println("YoutubeSearchExtractor collectStreamsFrom collector: ${collector.getItems().size}")
+//            Logd("YoutubeSearchExtractor collectStreamsFrom collector: ${collector.getItems().size}")
         }
     }
 
