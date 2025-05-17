@@ -5,7 +5,7 @@ allprojects {
     compileJava.options.encoding = 'UTF-8'
     compileTestJava.options.encoding = 'UTF-8'
 
-    version 'lv0.24.5.1'
+    version 'lv0.24.6.0'
     group 'com.github.XilinJia'
 
     repositories {
@@ -78,7 +78,7 @@ task aggregatedJavadocs(type: Javadoc, group: 'Documentation') {
     }
 }
 buildscript {
-    ext.kotlin_version = '2.1.10'
+    ext.kotlin_version = '2.1.20'
     repositories {
         mavenCentral()
     }

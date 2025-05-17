@@ -11,12 +11,6 @@ import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.IOS_CLIENT_VERS
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.IOS_DEVICE_MODEL
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.IOS_OS_VERSION
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.MOBILE_CLIENT_PLATFORM
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_CLIENT_ID
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_CLIENT_NAME
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_CLIENT_PLATFORM
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_CLIENT_VERSION
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_DEVICE_MAKE
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_DEVICE_MODEL_AND_OS_NAME
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WATCH_CLIENT_SCREEN
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_CLIENT_ID
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_CLIENT_NAME
@@ -43,12 +37,6 @@ class InnertubeClientRequestInfo private constructor(var clientInfo: ClientInfo,
             return InnertubeClientRequestInfo(
                 ClientInfo(WEB_EMBEDDED_CLIENT_NAME, WEB_REMIX_HARDCODED_CLIENT_VERSION, EMBED_CLIENT_SCREEN, WEB_EMBEDDED_CLIENT_ID, null),
                 DeviceInfo(DESKTOP_CLIENT_PLATFORM, null, null, null, null, -1))
-        }
-
-        fun ofTvHtml5Client(): InnertubeClientRequestInfo {
-            return InnertubeClientRequestInfo(
-                ClientInfo(TVHTML5_CLIENT_NAME, TVHTML5_CLIENT_VERSION, WATCH_CLIENT_SCREEN, TVHTML5_CLIENT_ID, null),
-                DeviceInfo(TVHTML5_CLIENT_PLATFORM, TVHTML5_DEVICE_MAKE, TVHTML5_DEVICE_MODEL_AND_OS_NAME, TVHTML5_DEVICE_MODEL_AND_OS_NAME, "", -1))
         }
 
         fun ofAndroidClient(): InnertubeClientRequestInfo {

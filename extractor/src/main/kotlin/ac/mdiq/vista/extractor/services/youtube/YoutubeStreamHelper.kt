@@ -4,9 +4,6 @@ import ac.mdiq.vista.extractor.Vista.downloader
 import ac.mdiq.vista.extractor.exceptions.ExtractionException
 import ac.mdiq.vista.extractor.localization.ContentCountry
 import ac.mdiq.vista.extractor.localization.Localization
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_CLIENT_ID
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_CLIENT_VERSION
-import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.TVHTML5_USER_AGENT
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_EMBEDDED_CLIENT_ID
 import ac.mdiq.vista.extractor.services.youtube.ClientsConstants.WEB_EMBEDDED_CLIENT_VERSION
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.CONTENT_CHECK_OK
@@ -58,59 +55,9 @@ object YoutubeStreamHelper {
 
         val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
 
-        val url: String = (YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER + "&\$fields=microformat,playabilityStatus,storyboards,videoDetails")
+        val url: String = ("$YOUTUBEI_V1_URL$PLAYER?$DISABLE_PRETTY_PRINT_PARAMETER&\$fields=microformat,playabilityStatus,storyboards,videoDetails")
 
         return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    fun getTvHtml5PlayerResponse(localization: Localization, contentCountry: ContentCountry, videoId: String, cpn: String, signatureTimestamp: Int): JsonObject {
-        val innertubeClientRequestInfo = InnertubeClientRequestInfo.ofTvHtml5Client()
-
-        val headers: MutableMap<String, List<String>> = getClientHeaders(TVHTML5_CLIENT_ID, TVHTML5_CLIENT_VERSION).toMutableMap()
-        headers.putAll(getOriginReferrerHeaders("https://www.youtube.com"))
-        headers.put("User-Agent", listOf<String>(TVHTML5_USER_AGENT))
-
-        // We must always pass a valid visitorData to get valid player responses, which needs to be
-        // got from YouTube
-        // For some reason, the TVHTML5 client doesn't support the visitor_id endpoint, use the
-        // guide one instead, which is quite lightweight
-        innertubeClientRequestInfo.clientInfo.visitorData =
-            getVisitorDataFromInnertube(innertubeClientRequestInfo, localization, contentCountry, headers, YOUTUBEI_V1_URL, null, true)
-
-        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, null)
-
-        addVideoIdCpnAndOkChecks(builder, videoId, cpn)
-
-        addPlaybackContext(builder, BASE_YT_DESKTOP_WATCH_URL + videoId, signatureTimestamp)
-
-        val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
-
-        val url: String = YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
-
-        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
-    }
-
-    @Throws(IOException::class, ExtractionException::class)
-    fun getWebFullPlayerResponse(localization: Localization, contentCountry: ContentCountry,
-            videoId: String, cpn: String, webPoTokenResult: PoTokenResult, signatureTimestamp: Int): JsonObject {
-        val innertubeClientRequestInfo = InnertubeClientRequestInfo.ofWebClient()
-        innertubeClientRequestInfo.clientInfo.clientVersion = getClientVersion()
-        innertubeClientRequestInfo.clientInfo.visitorData = webPoTokenResult.visitorData
-
-        val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, null)
-
-        addVideoIdCpnAndOkChecks(builder, videoId, cpn)
-
-        addPlaybackContext(builder, BASE_YT_DESKTOP_WATCH_URL + videoId, signatureTimestamp)
-
-        addPoToken(builder, webPoTokenResult.playerRequestPoToken)
-
-        val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
-
-        val url: String = YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
-
-        return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, youTubeHeaders, body, localization)))
     }
 
     @Throws(IOException::class, ExtractionException::class)
@@ -137,7 +84,7 @@ object YoutubeStreamHelper {
         if (webEmbeddedPoTokenResult != null) addPoToken(builder, webEmbeddedPoTokenResult.playerRequestPoToken)
 
         val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
-        val url: String = YOUTUBEI_V1_URL + PLAYER + "?" + DISABLE_PRETTY_PRINT_PARAMETER
+        val url = "$YOUTUBEI_V1_URL$PLAYER?$DISABLE_PRETTY_PRINT_PARAMETER"
 
         return toJsonObject(getValidJsonResponseBody(downloader.postWithContentTypeJson(url, headers, body, localization)))
     }
@@ -175,10 +122,9 @@ object YoutubeStreamHelper {
             getVisitorDataFromInnertube(innertubeClientRequestInfo, localization, contentCountry, headers, YOUTUBEI_V1_GAPIS_URL, null, false)
 
         val builder: JsonBuilder<JsonObject?> = prepareJsonBuilder(localization, contentCountry, innertubeClientRequestInfo, null)
-
+        builder.`object`("playerRequest")
         addVideoIdCpnAndOkChecks(builder, videoId, cpn)
-
-        builder.`object`("playerRequest").value(VIDEO_ID, videoId).end().value("disablePlayerResponse", false)
+        builder.end().value("disablePlayerResponse", false)
 
         val body: ByteArray? = JsonWriter.string(builder.done()).toByteArray(StandardCharsets.UTF_8)
 
@@ -235,8 +181,8 @@ object YoutubeStreamHelper {
     }
 
     private fun getMobileClientHeaders(userAgent: String): MutableMap<String, List<String>> {
-        return mutableMapOf<String, List<String>>(
-            "User-Agent" to mutableListOf<String>(userAgent),
-            "X-Goog-Api-Format-Version" to mutableListOf<String>("2"))
+        return mutableMapOf(
+            "User-Agent" to mutableListOf(userAgent),
+            "X-Goog-Api-Format-Version" to mutableListOf("2"))
     }
 }

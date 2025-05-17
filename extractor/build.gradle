@@ -10,16 +10,22 @@ test {
     useJUnitPlatform()
 }
 
+ext {
+    rhinoVersion = '1.8.0'
+}
+
 dependencies {
     implementation project(':timeago-parser')
 
     implementation "com.github.TeamNewPipe:nanojson:$nanojsonVersion"
-    implementation 'org.jsoup:jsoup:1.18.1'
+    implementation 'org.jsoup:jsoup:1.19.1'
 
     // do not upgrade to 1.7.14, since in 1.7.14 Rhino uses the `SourceVersion` class, which is not
     // available on Android (even when using desugaring), and `NoClassDefFoundError` is thrown
 //    annotationProcessor 'org.mozilla:rhino:1.7.15'
-    implementation 'org.mozilla:rhino:1.7.15'
+//    implementation 'org.mozilla:rhino:1.7.15'
+    implementation "org.mozilla:rhino:$rhinoVersion"
+    implementation "org.mozilla:rhino-engine:$rhinoVersion"
 
     testImplementation platform("org.junit:junit-bom:$junitVersion")
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

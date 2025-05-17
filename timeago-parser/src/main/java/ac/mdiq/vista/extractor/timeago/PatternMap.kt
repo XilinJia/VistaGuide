@@ -1,0 +1,174 @@
+package ac.mdiq.vista.extractor.timeago
+
+import ac.mdiq.vista.extractor.timeago.patterns.af
+import ac.mdiq.vista.extractor.timeago.patterns.am
+import ac.mdiq.vista.extractor.timeago.patterns.ar
+import ac.mdiq.vista.extractor.timeago.patterns.az
+import ac.mdiq.vista.extractor.timeago.patterns.be
+import ac.mdiq.vista.extractor.timeago.patterns.bg
+import ac.mdiq.vista.extractor.timeago.patterns.bn
+import ac.mdiq.vista.extractor.timeago.patterns.bs
+import ac.mdiq.vista.extractor.timeago.patterns.ca
+import ac.mdiq.vista.extractor.timeago.patterns.cs
+import ac.mdiq.vista.extractor.timeago.patterns.da
+import ac.mdiq.vista.extractor.timeago.patterns.de
+import ac.mdiq.vista.extractor.timeago.patterns.el
+import ac.mdiq.vista.extractor.timeago.patterns.en
+import ac.mdiq.vista.extractor.timeago.patterns.en_GB
+import ac.mdiq.vista.extractor.timeago.patterns.es
+import ac.mdiq.vista.extractor.timeago.patterns.es_419
+import ac.mdiq.vista.extractor.timeago.patterns.es_US
+import ac.mdiq.vista.extractor.timeago.patterns.et
+import ac.mdiq.vista.extractor.timeago.patterns.eu
+import ac.mdiq.vista.extractor.timeago.patterns.fa
+import ac.mdiq.vista.extractor.timeago.patterns.fi
+import ac.mdiq.vista.extractor.timeago.patterns.fil
+import ac.mdiq.vista.extractor.timeago.patterns.fr
+import ac.mdiq.vista.extractor.timeago.patterns.fr_CA
+import ac.mdiq.vista.extractor.timeago.patterns.gl
+import ac.mdiq.vista.extractor.timeago.patterns.gu
+import ac.mdiq.vista.extractor.timeago.patterns.hi
+import ac.mdiq.vista.extractor.timeago.patterns.hr
+import ac.mdiq.vista.extractor.timeago.patterns.hu
+import ac.mdiq.vista.extractor.timeago.patterns.hy
+import ac.mdiq.vista.extractor.timeago.patterns.id
+import ac.mdiq.vista.extractor.timeago.patterns.`is`
+import ac.mdiq.vista.extractor.timeago.patterns.it
+import ac.mdiq.vista.extractor.timeago.patterns.iw
+import ac.mdiq.vista.extractor.timeago.patterns.ja
+import ac.mdiq.vista.extractor.timeago.patterns.ka
+import ac.mdiq.vista.extractor.timeago.patterns.kk
+import ac.mdiq.vista.extractor.timeago.patterns.km
+import ac.mdiq.vista.extractor.timeago.patterns.kn
+import ac.mdiq.vista.extractor.timeago.patterns.ko
+import ac.mdiq.vista.extractor.timeago.patterns.ky
+import ac.mdiq.vista.extractor.timeago.patterns.lo
+import ac.mdiq.vista.extractor.timeago.patterns.lt
+import ac.mdiq.vista.extractor.timeago.patterns.lv
+import ac.mdiq.vista.extractor.timeago.patterns.mk
+import ac.mdiq.vista.extractor.timeago.patterns.ml
+import ac.mdiq.vista.extractor.timeago.patterns.mn
+import ac.mdiq.vista.extractor.timeago.patterns.mr
+import ac.mdiq.vista.extractor.timeago.patterns.ms
+import ac.mdiq.vista.extractor.timeago.patterns.my
+import ac.mdiq.vista.extractor.timeago.patterns.ne
+import ac.mdiq.vista.extractor.timeago.patterns.nl
+import ac.mdiq.vista.extractor.timeago.patterns.no
+import ac.mdiq.vista.extractor.timeago.patterns.pa
+import ac.mdiq.vista.extractor.timeago.patterns.pl
+import ac.mdiq.vista.extractor.timeago.patterns.pt
+import ac.mdiq.vista.extractor.timeago.patterns.pt_PT
+import ac.mdiq.vista.extractor.timeago.patterns.ro
+import ac.mdiq.vista.extractor.timeago.patterns.ru
+import ac.mdiq.vista.extractor.timeago.patterns.si
+import ac.mdiq.vista.extractor.timeago.patterns.sk
+import ac.mdiq.vista.extractor.timeago.patterns.sl
+import ac.mdiq.vista.extractor.timeago.patterns.sq
+import ac.mdiq.vista.extractor.timeago.patterns.sr
+import ac.mdiq.vista.extractor.timeago.patterns.sr_Latn
+import ac.mdiq.vista.extractor.timeago.patterns.sv
+import ac.mdiq.vista.extractor.timeago.patterns.sw
+import ac.mdiq.vista.extractor.timeago.patterns.ta
+import ac.mdiq.vista.extractor.timeago.patterns.te
+import ac.mdiq.vista.extractor.timeago.patterns.th
+import ac.mdiq.vista.extractor.timeago.patterns.tr
+import ac.mdiq.vista.extractor.timeago.patterns.uk
+import ac.mdiq.vista.extractor.timeago.patterns.ur
+import ac.mdiq.vista.extractor.timeago.patterns.uz
+import ac.mdiq.vista.extractor.timeago.patterns.vi
+import ac.mdiq.vista.extractor.timeago.patterns.zh_CN
+import ac.mdiq.vista.extractor.timeago.patterns.zh_HK
+import ac.mdiq.vista.extractor.timeago.patterns.zh_TW
+import ac.mdiq.vista.extractor.timeago.patterns.zu
+
+
+object PatternMap {
+    private val patternMap: MutableMap<String?, PatternsHolder?> = HashMap<String?, PatternsHolder?>()
+
+    init {
+        patternMap.put("af", af.getInstance())
+        patternMap.put("am", am.getInstance())
+        patternMap.put("ar", ar.getInstance())
+        patternMap.put("az", az.getInstance())
+        patternMap.put("be", be.getInstance())
+        patternMap.put("bg", bg.getInstance())
+        patternMap.put("bn", bn.getInstance())
+        patternMap.put("bs", bs.getInstance())
+        patternMap.put("ca", ca.getInstance())
+        patternMap.put("cs", cs.getInstance())
+        patternMap.put("da", da.getInstance())
+        patternMap.put("de", de.getInstance())
+        patternMap.put("el", el.getInstance())
+        patternMap.put("en", en.getInstance())
+        patternMap.put("en_GB", en_GB.getInstance())
+        patternMap.put("es", es.getInstance())
+        patternMap.put("es_419", es_419.getInstance())
+        patternMap.put("es_US", es_US.getInstance())
+        patternMap.put("et", et.getInstance())
+        patternMap.put("eu", eu.getInstance())
+        patternMap.put("fa", fa.getInstance())
+        patternMap.put("fi", fi.getInstance())
+        patternMap.put("fil", fil.getInstance())
+        patternMap.put("fr", fr.getInstance())
+        patternMap.put("fr_CA", fr_CA.getInstance())
+        patternMap.put("gl", gl.getInstance())
+        patternMap.put("gu", gu.getInstance())
+        patternMap.put("hi", hi.getInstance())
+        patternMap.put("hr", hr.getInstance())
+        patternMap.put("hu", hu.getInstance())
+        patternMap.put("hy", hy.getInstance())
+        patternMap.put("id", id.getInstance())
+        patternMap.put("is", `is`.getInstance())
+        patternMap.put("it", it.getInstance())
+        patternMap.put("iw", iw.getInstance())
+        patternMap.put("ja", ja.getInstance())
+        patternMap.put("ka", ka.getInstance())
+        patternMap.put("kk", kk.getInstance())
+        patternMap.put("km", km.getInstance())
+        patternMap.put("kn", kn.getInstance())
+        patternMap.put("ko", ko.getInstance())
+        patternMap.put("ky", ky.getInstance())
+        patternMap.put("lo", lo.getInstance())
+        patternMap.put("lt", lt.getInstance())
+        patternMap.put("lv", lv.getInstance())
+        patternMap.put("mk", mk.getInstance())
+        patternMap.put("ml", ml.getInstance())
+        patternMap.put("mn", mn.getInstance())
+        patternMap.put("mr", mr.getInstance())
+        patternMap.put("ms", ms.getInstance())
+        patternMap.put("my", my.getInstance())
+        patternMap.put("ne", ne.getInstance())
+        patternMap.put("nl", nl.getInstance())
+        patternMap.put("no", no.getInstance())
+        patternMap.put("pa", pa.getInstance())
+        patternMap.put("pl", pl.getInstance())
+        patternMap.put("pt", pt.getInstance())
+        patternMap.put("pt_PT", pt_PT.getInstance())
+        patternMap.put("ro", ro.getInstance())
+        patternMap.put("ru", ru.getInstance())
+        patternMap.put("si", si.getInstance())
+        patternMap.put("sk", sk.getInstance())
+        patternMap.put("sl", sl.getInstance())
+        patternMap.put("sq", sq.getInstance())
+        patternMap.put("sr", sr.getInstance())
+        patternMap.put("sr_Latn", sr_Latn.getInstance())
+        patternMap.put("sv", sv.getInstance())
+        patternMap.put("sw", sw.getInstance())
+        patternMap.put("ta", ta.getInstance())
+        patternMap.put("te", te.getInstance())
+        patternMap.put("th", th.getInstance())
+        patternMap.put("tr", tr.getInstance())
+        patternMap.put("uk", uk.getInstance())
+        patternMap.put("ur", ur.getInstance())
+        patternMap.put("uz", uz.getInstance())
+        patternMap.put("vi", vi.getInstance())
+        patternMap.put("zh_CN", zh_CN.getInstance())
+        patternMap.put("zh_HK", zh_HK.getInstance())
+        patternMap.put("zh_TW", zh_TW.getInstance())
+        patternMap.put("zu", zu.getInstance())
+    }
+
+    fun getPattern(languageCode: String?): PatternsHolder? {
+        return patternMap.get(languageCode)
+    }
+}

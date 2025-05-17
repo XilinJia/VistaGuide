@@ -24,7 +24,11 @@ import ac.mdiq.vista.extractor.Image
 import ac.mdiq.vista.extractor.Image.ResolutionLevel.Companion.fromHeight
 import ac.mdiq.vista.extractor.Vista.downloader
 import ac.mdiq.vista.extractor.downloader.Response
-import ac.mdiq.vista.extractor.exceptions.*
+import ac.mdiq.vista.extractor.exceptions.AccountTerminatedException
+import ac.mdiq.vista.extractor.exceptions.ContentNotAvailableException
+import ac.mdiq.vista.extractor.exceptions.ExtractionException
+import ac.mdiq.vista.extractor.exceptions.ParsingException
+import ac.mdiq.vista.extractor.exceptions.ReCaptchaException
 import ac.mdiq.vista.extractor.localization.ContentCountry
 import ac.mdiq.vista.extractor.localization.Localization
 import ac.mdiq.vista.extractor.playlist.PlaylistInfo
@@ -45,7 +49,6 @@ import ac.mdiq.vista.extractor.stream.AudioTrackType
 import ac.mdiq.vista.extractor.utils.JsonUtils.toJsonObject
 import ac.mdiq.vista.extractor.utils.Parser.RegexException
 import ac.mdiq.vista.extractor.utils.Parser.isMatch
-import ac.mdiq.vista.extractor.utils.ProtoBuilder
 import ac.mdiq.vista.extractor.utils.RandomStringFromAlphabetGenerator.generate
 import ac.mdiq.vista.extractor.utils.Utils.HTTP
 import ac.mdiq.vista.extractor.utils.Utils.HTTPS
@@ -55,8 +58,12 @@ import ac.mdiq.vista.extractor.utils.Utils.getStringResultFromRegexArray
 import ac.mdiq.vista.extractor.utils.Utils.removeNonDigitCharacters
 import ac.mdiq.vista.extractor.utils.Utils.replaceHttpWithHttps
 import ac.mdiq.vista.extractor.utils.Utils.stringToURL
-import com.grack.nanojson.*
-import org.jsoup.nodes.Entities
+import com.grack.nanojson.JsonArray
+import com.grack.nanojson.JsonBuilder
+import com.grack.nanojson.JsonObject
+import com.grack.nanojson.JsonParser
+import com.grack.nanojson.JsonParserException
+import com.grack.nanojson.JsonWriter
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URL
@@ -65,10 +72,12 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.Locale
+import java.util.Random
 import java.util.regex.Pattern
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import org.jsoup.nodes.Entities
 
 
 object YoutubeParsingHelper {
@@ -295,23 +304,6 @@ object YoutubeParsingHelper {
         return url.host.equals("y2u.be", ignoreCase = true)
     }
 
-    fun randomVisitorData(country: ContentCountry): String {
-        val pbE2 = ProtoBuilder()
-        pbE2.string(2, "")
-        pbE2.varint(4, (numberGenerator.nextInt(255) + 1).toLong())
-
-        val pbE = ProtoBuilder()
-        pbE.string(1, country.countryCode)
-        pbE.bytes(2, pbE2.toBytes())
-
-        val pb = ProtoBuilder()
-        pb.string(1, generate(
-            CONTENT_PLAYBACK_NONCE_ALPHABET, 11, numberGenerator))
-        pb.varint(5, System.currentTimeMillis() / 1000 - numberGenerator.nextInt(600000))
-        pb.bytes(6, pbE.toBytes())
-        return pb.toUrlencodedBase64()
-    }
-
     /**
      * Parses the duration string of the video expecting ":" or "." as separators
      *
@@ -404,16 +396,6 @@ object YoutubeParsingHelper {
     }
 
     /**
-     * Checks if the given playlist id is a YouTube Channel Mix (auto-generated playlist)
-     * Ids from a YouTube channel Mix start with "RDCM"
-     *
-     * @return Whether given id belongs to a YouTube Channel Mix
-     */
-    fun isYoutubeChannelMixId(playlistId: String): Boolean {
-        return playlistId.startsWith("RDCM")
-    }
-
-    /**
      * Checks if the given playlist id is a YouTube Genre Mix (auto-generated playlist)
      * Ids from a YouTube Genre Mix start with "RDGMEM"
      *
@@ -437,8 +419,6 @@ object YoutubeParsingHelper {
             playlistId.isEmpty() -> throw ParsingException("Video id could not be determined from empty playlist id")
             isYoutubeMyMixId(playlistId) -> return playlistId.substring(4)
             isYoutubeMusicMixId(playlistId) -> return playlistId.substring(6)
-            // Channel mixes are of the form RMCM{channelId}, so videoId can't be determined
-            isYoutubeChannelMixId(playlistId) -> throw ParsingException("Video id could not be determined from channel mix id: $playlistId")
             // Genre mixes are of the form RDGMEM{garbage}, so videoId can't be determined
             isYoutubeGenreMixId(playlistId) -> throw ParsingException("Video id could not be determined from genre mix id: $playlistId")
             isYoutubeMixId(playlistId) -> { // normal mix
@@ -464,7 +444,6 @@ object YoutubeParsingHelper {
         return when {
             playlistId.isNullOrEmpty() -> throw ParsingException("Could not extract playlist type from empty playlist id")
             isYoutubeMusicMixId(playlistId) -> PlaylistType.MIX_MUSIC
-            isYoutubeChannelMixId(playlistId) -> PlaylistType.MIX_CHANNEL
             isYoutubeGenreMixId(playlistId) -> PlaylistType.MIX_GENRE
             // Either a normal mix based on a stream, or a "my mix" (still based on a stream).
             // NOTE: if YouTube introduces even more types of mixes that still start with RD,

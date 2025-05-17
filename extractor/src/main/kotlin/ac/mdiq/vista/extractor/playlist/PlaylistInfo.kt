@@ -38,6 +38,8 @@ class PlaylistInfo private constructor(serviceId: Int, linkHandler: ListLinkHand
          * A mix made only of streams from (or related to) the same channel, for example YouTube
          * channel mixes
          */
+        @Deprecated("There is currently no service that implements this.\n" +
+                "         * YouTube removed all playlists with this type around 2024-06")
         MIX_CHANNEL,
 
         /**

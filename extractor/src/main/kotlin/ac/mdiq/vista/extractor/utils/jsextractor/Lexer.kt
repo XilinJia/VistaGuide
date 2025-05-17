@@ -67,7 +67,7 @@ class Lexer @JvmOverloads constructor(js: String?, languageVersion: Int = Contex
      */
     class ParsedToken internal constructor(@JvmField val token: Token, @JvmField val start: Int, @JvmField val end: Int)
 
-    private val stream = TokenStream(js ?: "", 0, languageVersion)
+    private val stream = EcmaScriptTokenStream(js ?: "", 0, false)
     private val lastThree = LookBehind()
     private val braceStack = Stack<Brace>()
     private val parenStack = Stack<Paren>()
@@ -180,7 +180,7 @@ class Lexer @JvmOverloads constructor(js: String?, languageVersion: Int = Contex
      */
     @Throws(ParsingException::class)
     fun handleCloseParenBooks(start: Int) {
-        if (parenStack.isEmpty()) throw ParsingException("unmached closing paren at $start")
+        if (parenStack.isEmpty()) throw ParsingException("unmatched closing paren at $start")
         lastThree.push(ParenMetaToken(Token.RP, stream.lineno, parenStack.pop()))
     }
 

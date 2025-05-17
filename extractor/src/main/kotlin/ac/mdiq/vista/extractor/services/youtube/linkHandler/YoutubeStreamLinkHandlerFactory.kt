@@ -65,11 +65,7 @@ class YoutubeStreamLinkHandlerFactory private constructor() : LinkHandlerFactory
         } catch (ignored: URISyntaxException) { }
 
         val url: URL
-        try {
-            url = stringToURL(urlString)
-        } catch (e: MalformedURLException) {
-            throw IllegalArgumentException("The given URL is not valid")
-        }
+        try { url = stringToURL(urlString) } catch (e: MalformedURLException) { throw ParsingException("The given URL is not valid", e) }
 
         val host = url.host
         var path = url.path

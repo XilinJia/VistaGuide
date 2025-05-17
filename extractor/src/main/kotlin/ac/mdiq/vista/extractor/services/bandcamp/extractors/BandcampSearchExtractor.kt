@@ -73,9 +73,6 @@ class BandcampSearchExtractor(service: StreamingService, linkHandler: SearchQuer
             }
         }
 
-        // Search results appear to be capped at six pages
-        assert(pages.size < 10)
-
         var nextUrl: String? = null
         if (currentPage < pages.size) {
             nextUrl = page.url!!.substring(0, page.url!!.length - 1) + (currentPage + 1)

@@ -1,13 +1,11 @@
 package ac.mdiq.vista.extractor.services.youtube.linkHandler
 
-import ac.mdiq.vista.extractor.exceptions.ContentNotSupportedException
 import ac.mdiq.vista.extractor.exceptions.ParsingException
 import ac.mdiq.vista.extractor.linkhandler.LinkHandler
 import ac.mdiq.vista.extractor.linkhandler.ListLinkHandler
 import ac.mdiq.vista.extractor.linkhandler.ListLinkHandlerFactory
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.extractVideoIdFromMixId
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isInvidiousURL
-import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isYoutubeChannelMixId
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isYoutubeMixId
 import ac.mdiq.vista.extractor.services.youtube.YoutubeParsingHelper.isYoutubeURL
 import ac.mdiq.vista.extractor.utils.Utils.getQueryValue
@@ -34,10 +32,6 @@ class YoutubePlaylistLinkHandlerFactory private constructor() : ListLinkHandlerF
             val listID = getQueryValue(urlObj, "list") ?: throw ParsingException("the URL given does not include a playlist")
 
             if (!listID.matches("[a-zA-Z0-9_-]{10,}".toRegex())) throw ParsingException("the list-ID given in the URL does not match the list pattern")
-
-            // Video id can't be determined from the channel mix id.
-            // See YoutubeParsingHelper#extractVideoIdFromMixId
-            if (isYoutubeChannelMixId(listID) && getQueryValue(urlObj, "v") == null) throw ContentNotSupportedException("Channel Mix without a video id are not supported")
 
             return listID
         } catch (exception: Exception) {

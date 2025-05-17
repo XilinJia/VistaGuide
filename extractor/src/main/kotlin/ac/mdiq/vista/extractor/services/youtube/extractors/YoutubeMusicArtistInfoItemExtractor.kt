@@ -48,10 +48,15 @@ class YoutubeMusicArtistInfoItemExtractor(private val artistInfoItem: JsonObject
 
     @Throws(ParsingException::class)
     override fun getSubscriberCount(): Long {
-        val subscriberCount = getTextFromObject(artistInfoItem.getArray("flexColumns")
-            .getObject(2)
+        val flexColumns = artistInfoItem.getArray("flexColumns")
+        val runs = flexColumns
+            .getObject(flexColumns.size - 1)
             .getObject("musicResponsiveListItemFlexColumnRenderer")
-            .getObject("text"))
+            .getObject("text")
+            .getArray("runs")
+        // NOTE: YoutubeParsingHelper#getTextFromObject would use all entries from the run array,
+        // which is not wanted as only the last entry contains the actual subscriberCount
+        val subscriberCount = runs.getObject(runs.size - 1).getString("text")
         if (!subscriberCount.isNullOrEmpty()) {
             return try {
                 mixedNumberWordToLong(subscriberCount)

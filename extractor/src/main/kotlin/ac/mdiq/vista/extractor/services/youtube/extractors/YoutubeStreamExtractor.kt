@@ -311,7 +311,7 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
             // If ratings are not allowed, there is no like count available
             if (!playerResponse!!.getObject("videoDetails").getBoolean("allowRatings")) return -1L
 
-            val topLevelButtons = this.videoPrimaryInfoRenderer!!.getObject("videoActions").getObject("menuRenderer").getArray("topLevelButtons")
+            val topLevelButtons = this.videoPrimaryInfoRenderer.getObject("videoActions").getObject("menuRenderer").getArray("topLevelButtons")
 
             try { return parseLikeCountFromLikeButtonViewModel(topLevelButtons)
             } catch (ignored: ParsingException) {
@@ -527,19 +527,19 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         val localization = extractorLocalization
         val contentCountry = extractorContentCountry
 
-        val poTokenproviderInstance = poTokenProvider
-        val noPoTokenProviderSet = poTokenproviderInstance == null
+        val poTokenProviderInstance = poTokenProvider
+        val noPoTokenProviderSet = poTokenProviderInstance == null
 
-        fetchHtml5Client(localization, contentCountry, videoId, poTokenproviderInstance, noPoTokenProviderSet)
+        fetchHtml5Client(localization, contentCountry, videoId, poTokenProviderInstance)
 
         setStreamType()
 
-        val androidPoTokenResult = if (noPoTokenProviderSet) null else poTokenproviderInstance.getAndroidClientPoToken(videoId)
+        val androidPoTokenResult = if (noPoTokenProviderSet) null else poTokenProviderInstance.getAndroidClientPoToken(videoId)
 
         fetchAndroidClient(localization, contentCountry, videoId, androidPoTokenResult)
 
         if (fetchIosClient) {
-            val iosPoTokenResult = if (noPoTokenProviderSet) null else poTokenproviderInstance.getIosClientPoToken(videoId)
+            val iosPoTokenResult = if (noPoTokenProviderSet) null else poTokenProviderInstance.getIosClientPoToken(videoId)
             fetchIosClient(localization, contentCountry, videoId, iosPoTokenResult)
         }
 
@@ -554,66 +554,32 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
     }
 
     @Throws(IOException::class, ExtractionException::class)
-    private fun fetchHtml5Client(localization: Localization, contentCountry: ContentCountry, videoId: String, poTokenProviderInstance: PoTokenProvider?, noPoTokenProviderSet: Boolean) {
+    private fun fetchHtml5Client(localization: Localization, contentCountry: ContentCountry, videoId: String, poTokenProviderInstance: PoTokenProvider?) {
         html5Cpn = generateContentPlaybackNonce()
 
-        // Suppress NPE warning as nullability is already checked before and passed with
-        // noPoTokenProviderSet
-        val webPoTokenResult = if (noPoTokenProviderSet) null else poTokenProviderInstance!!.getWebClientPoToken(videoId)
-        val webPlayerResponse: JsonObject
-        if (noPoTokenProviderSet || webPoTokenResult == null) {
-            webPlayerResponse = getWebMetadataPlayerResponse(localization, contentCountry, videoId)
+        val webPlayerResponse = getWebMetadataPlayerResponse(localization, contentCountry, videoId)
 
-            throwExceptionIfPlayerResponseNotValid(webPlayerResponse, videoId)
+        throwExceptionIfPlayerResponseNotValid(webPlayerResponse, videoId)
 
-            // Save the webPlayerResponse into playerResponse in the case the video cannot be
-            // played, so some metadata can be retrieved
-            playerResponse = webPlayerResponse
+        // Save the webPlayerResponse into playerResponse in the case the video cannot be
+        // played, so some metadata can be retrieved
+        playerResponse = webPlayerResponse
 
-            // The microformat JSON object of the content is only returned on the WEB client,
-            // so we need to store it instead of getting it directly from the playerResponse
-            playerMicroFormatRenderer = playerResponse!!.getObject("microformat").getObject("playerMicroformatRenderer")
+        // The microformat JSON object of the content is only returned on the WEB client,
+        // so we need to store it instead of getting it directly from the playerResponse
+        playerMicroFormatRenderer = playerResponse!!.getObject("microformat")
+            .getObject("playerMicroformatRenderer")
 
-            val playabilityStatus = webPlayerResponse.getObject(PLAYABILITY_STATUS)
+        val playabilityStatus = webPlayerResponse.getObject(PLAYABILITY_STATUS)
 
-            if (isVideoAgeRestricted(playabilityStatus)) {
-                fetchHtml5EmbedClient(localization, contentCountry, videoId, if (noPoTokenProviderSet) null else poTokenProviderInstance!!.getWebEmbedClientPoToken(videoId))
-            } else {
-                checkPlayabilityStatus(playabilityStatus)
-
-                val tvHtml5PlayerResponse =
-                    YoutubeStreamHelper.getTvHtml5PlayerResponse(localization, contentCountry, videoId, html5Cpn!!, getSignatureTimestamp(videoId))
-
-                if (isPlayerResponseNotValid(tvHtml5PlayerResponse, videoId)) throw ExtractionException("TVHTML5 player response is not valid")
-
-                html5StreamingData = tvHtml5PlayerResponse.getObject(STREAMING_DATA)
-                playerCaptionsTracklistRenderer = tvHtml5PlayerResponse.getObject(CAPTIONS).getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
-            }
+        if (isVideoAgeRestricted(playabilityStatus!!)) {
+            fetchHtml5EmbedClient(localization, contentCountry, videoId,
+                if (poTokenProviderInstance == null)
+                    null
+                else
+                    poTokenProviderInstance.getWebEmbedClientPoToken(videoId))
         } else {
-            webPlayerResponse = YoutubeStreamHelper.getWebFullPlayerResponse(
-                localization, contentCountry, videoId, html5Cpn!!, webPoTokenResult, getSignatureTimestamp(videoId))
-
-            throwExceptionIfPlayerResponseNotValid(webPlayerResponse, videoId)
-
-            // Save the webPlayerResponse into playerResponse in the case the video cannot be
-            // played, so some metadata can be retrieved
-            playerResponse = webPlayerResponse
-
-            // The microformat JSON object of the content is only returned on the WEB client,
-            // so we need to store it instead of getting it directly from the playerResponse
-            playerMicroFormatRenderer = playerResponse!!.getObject("microformat").getObject("playerMicroformatRenderer")
-
-            val playabilityStatus = webPlayerResponse.getObject(PLAYABILITY_STATUS)
-
-            if (isVideoAgeRestricted(playabilityStatus))
-                fetchHtml5EmbedClient(localization, contentCountry, videoId, poTokenProviderInstance!!.getWebEmbedClientPoToken(videoId))
-            else {
-                checkPlayabilityStatus(playabilityStatus)
-                html5StreamingData = webPlayerResponse.getObject(STREAMING_DATA)
-                playerCaptionsTracklistRenderer = webPlayerResponse.getObject(CAPTIONS)
-                    .getObject(PLAYER_CAPTIONS_TRACKLIST_RENDERER)
-                html5StreamingUrlsPoToken = webPoTokenResult.streamingDataPoToken
-            }
+            checkPlayabilityStatus(playabilityStatus)
         }
     }
 
@@ -850,12 +816,13 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
 
     @Throws(ExtractionException::class)
     private fun buildAndAddItagInfoToList(videoId: String, formatData: JsonObject, itagItem: ItagItem, itagType: ItagType,
-                                          contentPlaybackNonce: String, poToken: String?): ItagInfo {
+                                          contentPlaybackNonce: String, poToken: String?): ItagInfo? {
         var streamUrl: String
         if (formatData.has("url")) streamUrl = formatData.getString("url")
         else {
             // This url has an obfuscated signature
             val cipherString = formatData.getString(CIPHER, formatData.getString(SIGNATURE_CIPHER))
+            if (cipherString.isNullOrEmpty()) return null
             val cipher = compatParseMap(cipherString)
             val signature = deobfuscateSignature(videoId, cipher.getOrDefault("s", ""))
             streamUrl = cipher["url"] + "&" + cipher["sp"] + "=" + signature
@@ -918,10 +885,8 @@ class YoutubeStreamExtractor(service: StreamingService, linkHandler: LinkHandler
         }
 
         // YouTube return the content length and the approximate duration as strings
-        itagItem.setContentLength(formatData.getString("contentLength",
-            java.lang.String.valueOf(CONTENT_LENGTH_UNKNOWN)).toLong())
-        itagItem.setApproxDurationMs(formatData.getString("approxDurationMs",
-            java.lang.String.valueOf(APPROX_DURATION_MS_UNKNOWN)).toLong())
+        itagItem.setContentLength(formatData.getString("contentLength", java.lang.String.valueOf(CONTENT_LENGTH_UNKNOWN)).toLong())
+        itagItem.setApproxDurationMs(formatData.getString("approxDurationMs", java.lang.String.valueOf(APPROX_DURATION_MS_UNKNOWN)).toLong())
 
         val itagInfo = ItagInfo(streamUrl, itagItem)
 
